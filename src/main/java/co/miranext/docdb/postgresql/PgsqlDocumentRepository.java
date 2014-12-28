@@ -5,6 +5,8 @@ import co.miranext.docdb.Criterion;
 import co.miranext.docdb.DocumentMeta;
 import co.miranext.docdb.DocumentRepository;
 import co.miranext.docdb.sql.SQLBuilder;
+import org.boon.core.reflection.BeanUtils;
+import org.boon.core.reflection.fields.FieldAccess;
 import org.boon.json.JsonFactory;
 import org.boon.json.ObjectMapper;
 import org.postgresql.util.PGobject;
@@ -16,6 +18,8 @@ import java.sql.ResultSet;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Postgresql implementation of DocumentRepository
@@ -62,6 +66,38 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         return findAsList(document,criteria != null ? criteria : new Criteria());
     }
 
+    /**
+     * Save this
+     *
+     * @param document
+     * @param <T>
+     */
+    @Override
+    public <T> void save(T document) {
+
+        DocumentMeta meta = DocumentMeta.fromAnnotation(document.getClass());
+        Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
+
+        FieldAccess idField = fields.get(meta.getIdField());
+
+        //we only use UUID
+        idField.setObject(document, UUID.randomUUID().toString());
+
+        String insertStmt = SQLBuilder.createSqlInsert(meta, null);
+
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement pstmt = con.prepareStatement(insertStmt) ){
+
+            pstmt.setObject(1, toPGObject(toJsonString(document)));
+
+            pstmt.executeUpdate();
+            //TODO: should we fail silently?
+
+        } catch ( Exception e ) {
+            throw new RuntimeException("Unable to save document: " + e.getMessage(),e);
+        }
+
+    }
 
     //Internal
 
@@ -137,6 +173,22 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         PsqlJsonFieldCriterion idCriterion = new PsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),id);
         criteria.add(idCriterion);
         return findInternal(document,criteria);
+    }
+
+    //utils
+    public static PGobject toPGObject(final String json) throws Exception {
+        PGobject jsonObject = new PGobject();
+        jsonObject.setType("jsonb");
+        jsonObject.setValue(json);
+        return jsonObject;
+    }
+
+    public static <T> String toJsonString(T document) {
+
+        ObjectMapper mapper =  JsonFactory.create();
+        String data = mapper.toJson(document);
+        return data;
+
     }
 
 }

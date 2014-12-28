@@ -52,4 +52,13 @@ public interface DocumentRepository {
     public <T> List<T> find(final Class<T> document, final Criteria criteria);
 
 
+    /**
+     * Persist the given document
+     *
+     * @param document
+     * @param <T>
+     */
+    public <T> void save(T document);
+
+
 }

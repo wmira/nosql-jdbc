@@ -2,6 +2,9 @@ package co.miranext.docdb.sql;
 
 import co.miranext.docdb.Criteria;
 import co.miranext.docdb.DocumentMeta;
+import org.boon.core.reflection.fields.FieldAccess;
+
+import java.util.Map;
 
 /**
  * TODO: finish this
@@ -49,6 +52,23 @@ public class SQLBuilder {
         builder.append(SQLBuilder.join(meta.getExtras(), " , "));
         builder.append("FROM " + meta.getTableName());
         builder.append(criteria.toSQLString());
+
+        return builder.toString();
+    }
+
+    /**
+     *
+     *
+     * @param meta
+     * @param fields
+     * @return
+     */
+    public static String createSqlInsert(DocumentMeta meta,final Map<String,FieldAccess> fields) {
+
+        StringBuilder builder = new StringBuilder("INSERT INTO " + meta.getTableName() + " ( " + meta.getColumnName() + " ) VALUES ( ? ) ");
+
+        //if extras is set, we need to set the values in external columns as well
+        //TODO: do that later
 
         return builder.toString();
     }
