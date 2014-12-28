@@ -140,20 +140,18 @@ public class PgsqlDocumentRepository implements DocumentRepository {
 
             //populate
             populateStatement(pstmt,criteria);
-
             ResultSet rs = pstmt.executeQuery();
 
             while ( rs.next() ) {
                 String jsonStr = rs.getString(meta.getColumnName());
                 ObjectMapper mapper =  JsonFactory.create();
-                //FIXME: retrieve extras
                 results.add(mapper.readValue(jsonStr,document));
             }
         } catch ( Exception e ) {
             throw new RuntimeException("Error on find: " + e.getMessage(),e);
         }
+        return results;
 
-        return null;
     }
 
 

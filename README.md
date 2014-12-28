@@ -51,6 +51,6 @@ List<Product> products = docRepo.find(Product.class,criteria);
 ```
 
 ## Todo
-More Unit Tests
-More Docs
-Updates
+1. More Unit Tests
+2. More Docs
+3. Document updates

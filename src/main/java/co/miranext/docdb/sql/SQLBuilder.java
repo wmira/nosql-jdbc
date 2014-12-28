@@ -1,5 +1,6 @@
 package co.miranext.docdb.sql;
 
+import co.miranext.docdb.ColumnExtra;
 import co.miranext.docdb.Criteria;
 import co.miranext.docdb.DocumentMeta;
 import org.boon.core.reflection.fields.FieldAccess;
@@ -25,6 +26,7 @@ public class SQLBuilder {
         return new SQLBuilder(meta);
     }
 
+
     public static String join(final String[] strings,String joinString) {
 
         StringBuilder sb = new StringBuilder();
@@ -49,9 +51,18 @@ public class SQLBuilder {
     public static String createSqlSelect(DocumentMeta meta,final Criteria criteria) {
 
         StringBuilder builder = new StringBuilder("SELECT " + meta.getColumnName() + " ");
-        builder.append(SQLBuilder.join(meta.getExtras(), " , "));
-        builder.append("FROM " + meta.getTableName());
-        builder.append(criteria.toSQLString());
+        if ( meta.getColumnExtras().length > 0 ) {
+            builder.append(" , ");
+            builder.append(SQLBuilder.join(meta.getExtras(), " , "));
+        }
+
+        builder.append(" FROM " + meta.getTableName() + " ");
+
+        if ( !criteria.isEmpty() ) {
+            builder.append(" WHERE ");
+            builder.append(criteria.toSQLString());
+        }
+
 
         return builder.toString();
     }

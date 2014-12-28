@@ -1,5 +1,8 @@
 package co.miranext.docdb;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Information about the document
  */
@@ -14,6 +17,9 @@ public class DocumentMeta {
     private String idField;
     private String[] extras;
 
+    private ColumnExtra[] columnExtras;
+    private ColumnExtra[] nonAutoColumnExtras;
+
     /**
      *
      */
@@ -22,6 +28,21 @@ public class DocumentMeta {
         this.columnName = columnName;
         this.idField = idField;
         this.extras = extras;
+
+        List<ColumnExtra> columnExtras = new ArrayList<>();
+        List<ColumnExtra> nonAutoColumnExtras = new ArrayList<>();
+        List<String> extrasStr = new ArrayList<>();
+        for ( String ext : extras ) {
+            ColumnExtra extra = new ColumnExtra(ext);
+            columnExtras.add(new ColumnExtra(ext));
+            if ( !extra.isAuto() ) {
+                nonAutoColumnExtras.add(extra);
+            }
+            extrasStr.add(extra.getColumn());
+        }
+        this.extras = extrasStr.toArray(new String[columnExtras.size()]);
+        this.columnExtras = columnExtras.toArray(new ColumnExtra[columnExtras.size()]);
+        this.nonAutoColumnExtras = columnExtras.toArray(new ColumnExtra[nonAutoColumnExtras.size()]);
     }
 
     public String getTableName() {
@@ -38,6 +59,10 @@ public class DocumentMeta {
 
     public String[] getExtras() {
         return extras;
+    }
+
+    public ColumnExtra[] getColumnExtras() {
+        return columnExtras;
     }
 
     /**

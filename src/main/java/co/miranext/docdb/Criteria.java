@@ -20,6 +20,10 @@ public  class Criteria {
         this.criteria.add(criterion);
     }
 
+
+    public boolean isEmpty() {
+        return this.criteria.size() == 0;
+    }
     /**
      * Creates a ?
      *
