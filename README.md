@@ -28,9 +28,9 @@ public Product {
   public String getCategory() { ... }
   
   public void setId() { ... }
-  public String setName() { ... }
-  public String setDescription() { ... }
-  public String setCategory() { ... }
+  public void setName() { ... }
+  public void setDescription() { ... }
+  public void setCategory() { ... }
 }
 
 ```
