@@ -9,36 +9,23 @@ import java.util.List;
  * Created by miranext on 12/28/14.
  */
 public  class Criteria {
-    public static String SQL_STMT_DELIM = " , ";
+
     protected List<Criterion> criteria;
 
     public Criteria() {
         this.criteria = new ArrayList<Criterion>();
     }
 
-    public void add(final Criterion criterion) {
+    public Criteria add(final Criterion criterion) {
         this.criteria.add(criterion);
+        return this;
     }
 
 
     public boolean isEmpty() {
         return this.criteria.size() == 0;
     }
-    /**
-     * Creates a ?
-     *
-     * @return
-     */
-    public String toSQLString() {
 
-        List<String> strings = new ArrayList<String>();
-
-        for ( Criterion criterion : criteria ) {
-            strings.add(criterion.toSQLString());
-        }
-
-        return SQLBuilder.join(strings.toArray(new String[strings.size()]),SQL_STMT_DELIM);
-    }
 
     public List<Criterion> getCriteria() {
         return this.criteria;

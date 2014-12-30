@@ -58,7 +58,7 @@ public interface DocumentRepository {
      * @param document
      * @param <T>
      */
-    public <T> void save(T document);
+    public <T> void saveOrUpdate(T document);
 
 
 }

@@ -1,9 +1,6 @@
 package co.miranext.docdb.postgresql;
 
-import co.miranext.docdb.Criteria;
-import co.miranext.docdb.Criterion;
-import co.miranext.docdb.DocumentMeta;
-import co.miranext.docdb.DocumentRepository;
+import co.miranext.docdb.*;
 import co.miranext.docdb.sql.SQLBuilder;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
@@ -12,14 +9,8 @@ import org.boon.json.ObjectMapper;
 import org.postgresql.util.PGobject;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Types;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.sql.*;
+import java.util.*;
 
 /**
  * Postgresql implementation of DocumentRepository
@@ -58,7 +49,7 @@ public class PgsqlDocumentRepository implements DocumentRepository {
 
     @Override
     public <T> T findOne(Class<T> document, Criteria criteria) {
-        return this.findInternal(document, criteria != null ? criteria : new Criteria());
+        return this.findInternal(DocumentMeta.fromAnnotation(document.getClass()),document, criteria != null ? criteria : new Criteria());
     }
 
     @Override
@@ -73,7 +64,7 @@ public class PgsqlDocumentRepository implements DocumentRepository {
      * @param <T>
      */
     @Override
-    public <T> void save(T document) {
+    public <T> void saveOrUpdate(T document) {
 
         DocumentMeta meta = DocumentMeta.fromAnnotation(document.getClass());
         Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
@@ -81,23 +72,43 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         FieldAccess idField = fields.get(meta.getIdField());
 
         //we only use UUID
-        idField.setObject(document, UUID.randomUUID().toString());
+        Object id = idField.getObject(document);
+        if ( id != null ) {
+            idField.setObject(document, UUID.randomUUID().toString());
+        }
 
-        String insertStmt = SQLBuilder.createSqlInsert(meta, null);
+        SQLBuilder sql = new SQLBuilder(meta,fields);
+        Map<String,Object> extraValues = SQLBuilder.generateExtraValues(document,id == null ? true : false,meta,fields);
+        if ( id == null ) {
+            sql.generateInsert();
+        } else {
+            sql.generateUpdate();
+        }
 
         try (Connection con = dataSource.getConnection();
-             PreparedStatement pstmt = con.prepareStatement(insertStmt) ){
+             PreparedStatement pstmt = con.prepareStatement(sql.getSqlQuery()) ){
 
-            pstmt.setObject(1, toPGObject(toJsonString(document)));
+            Map<Integer,String> mapping = new HashMap<>();
+
+            for ( Integer idx : mapping.keySet() ) {
+                String name = mapping.get(idx);
+                if ( name.equals(meta.getColumnName())) { //this is
+                    pstmt.setObject(idx, toPGObject(toJsonString(document)));
+                } else {
+                    //FIXME, i think we should allow to set values of extras to be passed in and not be set on the document
+                    pstmt.setObject(idx,extraValues.get(name));
+                }
+            }
 
             pstmt.executeUpdate();
             //TODO: should we fail silently?
-
         } catch ( Exception e ) {
             throw new RuntimeException("Unable to save document: " + e.getMessage(),e);
         }
 
     }
+
+
 
     //Internal
 
@@ -133,7 +144,7 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         DocumentMeta meta = DocumentMeta.fromAnnotation(document);
 
         List<T> results = new ArrayList<T>();
-        String query = SQLBuilder.createSqlSelect(meta, criteria);
+        String query = getSelectQueryString(criteria, meta);
 
         try (Connection con = dataSource.getConnection();
              PreparedStatement pstmt = con.prepareStatement(query) ){
@@ -143,9 +154,7 @@ public class PgsqlDocumentRepository implements DocumentRepository {
             ResultSet rs = pstmt.executeQuery();
 
             while ( rs.next() ) {
-                String jsonStr = rs.getString(meta.getColumnName());
-                ObjectMapper mapper =  JsonFactory.create();
-                results.add(mapper.readValue(jsonStr,document));
+                results.add( jsonDataToInstance(meta, document, rs));
             }
         } catch ( Exception e ) {
             throw new RuntimeException("Error on find: " + e.getMessage(),e);
@@ -154,15 +163,41 @@ public class PgsqlDocumentRepository implements DocumentRepository {
 
     }
 
+    private String getSelectQueryString(final Criteria criteria, final DocumentMeta meta) {
+        return SQLBuilder.createSqlSelect(meta, criteria, new SQLBuilder.FieldCriterionTransformer() {
+            @Override
+            public FieldCriterion transform(DocumentMeta meta, FieldCriterion criterion) {
+                return new PsqlJsonFieldCriterion(meta.getColumnName(), criterion.getField(), criterion.getValue());
+            }
+        });
+    }
 
-    private <T> T findInternal(Class<T> document, Criteria criteria) {
 
+    private <T> T findInternal(final DocumentMeta meta, final Class<T> document,final Criteria criteria) {
 
-        List<T> res = findAsList(document, criteria);
-        if ( res != null && res.size() > 0 ) {
-            return res.get(0);
+        String query = getSelectQueryString(criteria, meta);
+
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement pstmt = con.prepareStatement(query) ){
+
+            //populate
+            populateStatement(pstmt,criteria);
+            ResultSet rs = pstmt.executeQuery();
+
+            if ( rs.next() ) {
+                T value = jsonDataToInstance(meta, document, rs);
+                return value;
+            }
+        } catch ( Exception e ) {
+            throw new RuntimeException("Error on find: " + e.getMessage(),e);
         }
         return null;
+    }
+
+    private <T> T jsonDataToInstance(DocumentMeta meta, Class<T> document, ResultSet rs) throws SQLException {
+        String jsonStr = rs.getString(meta.getColumnName());
+        ObjectMapper mapper =  JsonFactory.create();
+        return mapper.readValue(jsonStr,document);
     }
 
     private <T> T findInternal(Class<T> document, final String id, Criteria criteria) {
@@ -170,7 +205,7 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         DocumentMeta meta = DocumentMeta.fromAnnotation(document);
         PsqlJsonFieldCriterion idCriterion = new PsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),id);
         criteria.add(idCriterion);
-        return findInternal(document,criteria);
+        return findInternal(meta,document,criteria);
     }
 
     //utils

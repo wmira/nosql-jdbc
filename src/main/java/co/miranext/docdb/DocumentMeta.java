@@ -77,7 +77,7 @@ public class DocumentMeta {
         Document document = cls.getAnnotation(Document.class);
 
         if ( document == null ) {
-            return null;
+            throw new RuntimeException("Class: " + cls.getName() + " has no @Document annotation.");
         }
 
         return new DocumentMeta(document.table(),document.column(),document.id(),document.extras());

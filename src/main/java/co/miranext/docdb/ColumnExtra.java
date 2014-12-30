@@ -32,4 +32,8 @@ public class ColumnExtra {
     public String getColumn() {
         return column;
     }
+
+    public String toString() {
+        return this.getColumn();
+    }
 }

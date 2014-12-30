@@ -3,7 +3,7 @@ package co.miranext.docdb;
 /**
  *
  */
-public abstract class FieldCriterion implements Criterion {
+public class FieldCriterion implements Criterion {
 
     protected String field;
     protected Object value;
@@ -32,8 +32,9 @@ public abstract class FieldCriterion implements Criterion {
         this.value = value;
     }
 
-    @Override
-    public abstract String toSQLString();
+    public String toSQLString() {
+        throw new RuntimeException("Not implemented");
+    }
 
     public String getField() {
         return field;
