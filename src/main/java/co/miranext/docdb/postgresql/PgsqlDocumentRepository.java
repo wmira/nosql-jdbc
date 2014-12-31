@@ -17,6 +17,8 @@ import java.util.*;
  */
 public class PgsqlDocumentRepository implements DocumentRepository {
 
+
+
     private DataSource dataSource;
 
     /**
@@ -93,10 +95,12 @@ public class PgsqlDocumentRepository implements DocumentRepository {
             for ( Integer idx : mapping.keySet() ) {
                 String name = mapping.get(idx);
                 if ( name.equals(meta.getColumnName())) { //this is
-                    pstmt.setObject(idx, toPGObject(toJsonString(document)));
+                    PGobject jsonObj = toPGObject(toJsonString(document));
+                    pstmt.setObject(idx,jsonObj,valueToSqlType(jsonObj));
                 } else {
                     //FIXME, i think we should allow to set values of extras to be passed in and not be set on the document
-                    pstmt.setObject(idx,extraValues.get(name));
+                    Object val = extraValues.get(name);
+                    pstmt.setObject(idx,extraValues.get(name),valueToSqlType(val));
                 }
             }
 

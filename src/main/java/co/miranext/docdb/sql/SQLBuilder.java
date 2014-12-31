@@ -1,7 +1,6 @@
 package co.miranext.docdb.sql;
 
 import co.miranext.docdb.*;
-import co.miranext.jdbc.document.ExtraColumn;
 import com.google.common.base.CaseFormat;
 import org.boon.core.reflection.fields.FieldAccess;
 
@@ -68,6 +67,9 @@ public class SQLBuilder {
         if ( extras != null && extras.length > 0 ) {
             for ( int i =0; i < extras.length; i++ ) {
                 ColumnExtra ce = extras[i]; //column extra is database table based. convert to bean type
+                if ( skipAuto && ce.isAuto() ) {
+                    continue;
+                }
                 FieldAccess field = fields.get(CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,ce.getColumn()));
                 if (field != null) {
                     Object value = field.getValue(document);

@@ -1,6 +1,7 @@
 package co.miranext.docdb.postgresql;
 
 import co.miranext.docdb.FieldCriterion;
+import com.google.common.base.CaseFormat;
 
 /**
  * Created by miranext on 12/28/14.
@@ -20,7 +21,6 @@ public class PsqlJsonFieldCriterion extends FieldCriterion {
         if ( this.columnName == null ) {
             throw new RuntimeException("column name is required!");
         }
-
         return this.columnName + "->>'" + this.field + "'=?";
     }
 }

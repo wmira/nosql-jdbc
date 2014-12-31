@@ -1,7 +1,7 @@
 docdb-jdbc
 ==========
 
-A Document Repository api for RDBMS that supports JSON types. Current implementation only supports Postgresql with [json/jsonb datatype](http://www.postgresql.org/docs/9.3/static/datatype-json.html)
+A NoSQL Repository API for RDBMS that supports JSON types. Current implementation only supports Postgresql with [json/jsonb datatype](http://www.postgresql.org/docs/9.3/static/datatype-json.html)
 
 ## Usage
 ```java

@@ -1,8 +1,14 @@
 package co.miranext.docdb;
 
+import co.miranext.docdb.postgresql.PgsqlDocumentRepository;
 import co.miranext.docdb.postgresql.PsqlJsonFieldCriterion;
 import co.miranext.docdb.sql.SQLBuilder;
+import org.boon.core.reflection.BeanUtils;
+import org.boon.core.reflection.fields.FieldAccess;
 import org.junit.Test;
+
+import java.util.Map;
+
 import static org.junit.Assert.*;
 /**
  *
@@ -29,7 +35,10 @@ public class CriteriaTest {
         criteria.add(cr);
         criteria.add(fieldCriterion);
 
-        assertEquals("column=?" + Criteria.SQL_STMT_DELIM + "column->>'id'=?",criteria.toSQLString());
+
+        Samp document = new Samp();
+        Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
+        assertEquals("column=?" + SQLBuilder.SQL_STMT_DELIM + "column->>'id'=?", new SQLBuilder(DocumentMeta.fromAnnotation(Samp.class),fields ));
 
         ColumnExtra extra = new ColumnExtra("col");
         ColumnExtra extraAuto = new ColumnExtra("auto:record_id");
@@ -53,7 +62,12 @@ public class CriteriaTest {
 
         String builderSelectRes = "SELECT data  , record , account_id FROM tbl  WHERE column->>'id'=?";
 
-        assertEquals(builderSelectRes,SQLBuilder.createSqlSelect(meta,criteria));
+        assertEquals(builderSelectRes,SQLBuilder.createSqlSelect(meta,criteria,null));
 
     }
+}
+
+@Document(table="samp")
+class Samp {
+
 }
