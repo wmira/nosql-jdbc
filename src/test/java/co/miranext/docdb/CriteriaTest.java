@@ -38,7 +38,7 @@ public class CriteriaTest {
 
         Samp document = new Samp();
         Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
-        assertEquals("column=?" + SQLBuilder.SQL_STMT_DELIM + "column->>'id'=?", new SQLBuilder(DocumentMeta.fromAnnotation(Samp.class),fields ));
+        assertEquals("column=?" + SQLBuilder.SQL_STMT_DELIM + "column->>'id'=?", new SQLBuilder<>(DocumentMeta.fromAnnotation(Samp.class),fields,document ));
 
         ColumnExtra extra = new ColumnExtra("col");
         ColumnExtra extraAuto = new ColumnExtra("auto:record_id");

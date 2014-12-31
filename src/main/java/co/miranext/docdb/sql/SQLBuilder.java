@@ -4,23 +4,26 @@ import co.miranext.docdb.*;
 import com.google.common.base.CaseFormat;
 import org.boon.core.reflection.fields.FieldAccess;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * TODO: finish this
+ * TODO: Fix this crap
  */
-public class SQLBuilder {
+public class SQLBuilder<T> {
 
     public static String SQL_STMT_DELIM = " , ";
+    public static String SQL_AND_DELIMITER = " AND ";
 
     private String sqlQuery;
     private Map<Integer,String> indexMapping;
 
     private final DocumentMeta meta;
     private final Map<String,FieldAccess> fields;
+    private T document;
 
     /**
      *
@@ -28,20 +31,23 @@ public class SQLBuilder {
      * @param meta
      * @param fields
      */
-    public SQLBuilder(final DocumentMeta meta,final Map<String,FieldAccess> fields) {
+    public SQLBuilder(final DocumentMeta meta,final Map<String,FieldAccess> fields,final T instance) {
         this.meta = meta;
         this.fields = fields;
+        this.document = instance;
     }
 
-
+    private void checkSQLState() {
+        if ( this.sqlQuery != null )  {
+            throw  new RuntimeException("Already generated.");
+        }
+    }
 
     /**
      *
      */
     public void generateInsert() {
-        if ( sqlQuery != null ) {
-            throw  new RuntimeException("Already generated.");
-        }
+        checkSQLState();
         this.indexMapping = new HashMap<>();
         StringBuilder builder = new StringBuilder("INSERT INTO " + meta.getTableName() + " ( " + SQLBuilder.generateInsertFields(meta) + " ) VALUES ( " + generateInsertParams(meta,indexMapping) + " ) ");
         this.sqlQuery = builder.toString();
@@ -51,8 +57,26 @@ public class SQLBuilder {
         return indexMapping;
     }
 
-    public void generateUpdate() {
-        throw new RuntimeException("Implement me pls");
+    public void generateUpdate(final FieldCriterionTransformer transformer) {
+        checkSQLState();
+        this.indexMapping = new HashMap<>();
+
+        FieldAccess ac = this.fields.get(meta.getIdField());
+        Field field = ac.getField();
+        String idVal;
+        try {
+            idVal = field.get(this.document).toString();
+        } catch ( Exception e) {
+            throw new RuntimeException("Unable to retrieve id field: " + e.getMessage(),e);
+        }
+
+        FieldCriterion fd = transformer.idFieldCriterion(meta,idVal);
+        StringBuilder builder = new StringBuilder("UPDATE " + meta.getTableName() + " SET " + meta.getColumnName() + "=? WHERE " + fd.toSQLString());
+
+        indexMapping.put(1,meta.getColumnName());
+        indexMapping.put(2,meta.getIdField());
+
+        this.sqlQuery = builder.toString();
     }
 
     public String getSqlQuery() {
@@ -108,14 +132,14 @@ public class SQLBuilder {
                 if ( ce.isAuto() ) {
                     continue;
                 }
-                sb.append(ce.getColumn());
-                indexMap.put(startCount++,ce.getColumn());
+                sb.append(" ? " );//ce.getColumn());
+                indexMap.put(startCount++, ce.getColumn());
                 if ( i != extras.length -1 ) {
                     sb.append(SQL_STMT_DELIM);
                 }
             }
         }
-        sb.append(" ) ");
+
         return sb.toString();
     }
 
@@ -194,22 +218,7 @@ public class SQLBuilder {
         }
         return sb.toString();
     }
-    /**
-     *
-     *
-     * @param meta
-     * @param fields
-     * @return
-     */
-    public static String createSqlInsert(final DocumentMeta meta,final Map<String,FieldAccess> fields) {
 
-        StringBuilder builder = new StringBuilder("INSERT INTO " + meta.getTableName() + " ( " + generateInsertFields(meta) + " ) VALUES ( ? ) ");
-
-        //if extras is set, we need to set the values in external columns as well
-        //TODO: do that later
-
-        return builder.toString();
-    }
 
     /**
      * Creates a ?
@@ -229,10 +238,12 @@ public class SQLBuilder {
             strings.add(toprocess.toSQLString());
         }
 
-        return SQLBuilder.join(strings.toArray(new String[strings.size()]),SQL_STMT_DELIM);
+        return SQLBuilder.join(strings.toArray(new String[strings.size()]),SQL_AND_DELIMITER);
     }
 
     public interface FieldCriterionTransformer {
         public FieldCriterion transform(final DocumentMeta meta,final FieldCriterion criterion);
+
+        public FieldCriterion idFieldCriterion(final DocumentMeta meta,String value);
     }
 }
