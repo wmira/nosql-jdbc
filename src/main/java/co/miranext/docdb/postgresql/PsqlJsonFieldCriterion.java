@@ -3,8 +3,12 @@ package co.miranext.docdb.postgresql;
 import co.miranext.docdb.FieldCriterion;
 import com.google.common.base.CaseFormat;
 
+import java.sql.Types;
+
 /**
- * Created by miranext on 12/28/14.
+ *
+ *
+ *
  */
 public class PsqlJsonFieldCriterion extends FieldCriterion {
 
@@ -23,4 +27,5 @@ public class PsqlJsonFieldCriterion extends FieldCriterion {
         }
         return this.columnName + "->>'" + this.field + "'=?";
     }
+
 }

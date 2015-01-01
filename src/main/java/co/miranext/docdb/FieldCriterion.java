@@ -47,4 +47,6 @@ public class FieldCriterion implements Criterion {
     public String getColumnName() {
         return columnName;
     }
+
+
 }

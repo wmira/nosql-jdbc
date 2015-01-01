@@ -119,7 +119,10 @@ public class PgsqlDocumentRepository implements DocumentRepository {
                 }
             }
 
-            pstmt.executeUpdate();
+            int count = pstmt.executeUpdate();
+            if ( count <= 0 ) {
+                throw new RuntimeException("Unable to save/update: count: '" + count);
+            }
             //TODO: should we fail silently?
         } catch ( Exception e ) {
             throw new RuntimeException("Unable to save document: " + e.getMessage(),e);
@@ -136,10 +139,13 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         if ( value instanceof String ) {
             return Types.LONGVARCHAR;
         } else if ( value instanceof Integer ) {
+
             return Types.INTEGER;
         } else if ( value instanceof  Long ) {
+
             return Types.BIGINT;
         } else if ( value instanceof PGobject ) {
+
             return Types.OTHER;
         } //FIXME: COMPLETE This
         throw new RuntimeException("Type not supported: " + value);
@@ -154,7 +160,17 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         for ( int i=0; i < size; i++ ) {
             Criterion criterion = criterionList.get(i);
             Object value = criterion.getValue();
-            pstmt.setObject(pstmtIdx++,value,valueToSqlType(value));
+            if ( criterion instanceof  FieldCriterion ) {
+                //for postgresql, all FieldCriterion are strings
+                if ( value != null ) {
+                    pstmt.setString(pstmtIdx++, value.toString());
+                } else {
+                    pstmt.setNull(pstmtIdx++,Types.NULL);
+                }
+
+            } else {
+                pstmt.setObject(pstmtIdx++, value, valueToSqlType(value));
+            }
         }
     }
 

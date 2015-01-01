@@ -5,5 +5,5 @@ package co.miranext.docdb;
  */
 public @interface DocumentRef {
 
-    Class ref();
+    Class value();
 }
