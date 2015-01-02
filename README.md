@@ -1,6 +1,8 @@
 nosql-jdbc
 ==========
 
+[![Build Status](https://travis-ci.org/wmira/nosql-jdbc.svg?branch=master)](https://travis-ci.org/wmira/nosql-jdbc)
+
 A NoSQL Repository API for RDBMS that supports JSON types. Current implementation only supports Postgresql with [json/jsonb datatype](http://www.postgresql.org/docs/9.3/static/datatype-json.html)
 
 ## Usage
