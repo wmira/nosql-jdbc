@@ -1,4 +1,4 @@
-package co.miranext.docdb;
+package co.miranext.nosql;
 
 /**
  *
@@ -35,5 +35,25 @@ public class ColumnExtra {
 
     public String toString() {
         return this.getColumn();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ColumnExtra)) return false;
+
+        ColumnExtra that = (ColumnExtra) o;
+
+        if (isAuto != that.isAuto) return false;
+        if (column != null ? !column.equals(that.column) : that.column != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (isAuto ? 1 : 0);
+        result = 31 * result + (column != null ? column.hashCode() : 0);
+        return result;
     }
 }

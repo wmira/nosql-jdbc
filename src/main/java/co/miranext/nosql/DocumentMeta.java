@@ -1,6 +1,7 @@
-package co.miranext.docdb;
+package co.miranext.nosql;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -33,6 +34,7 @@ public class DocumentMeta {
         List<ColumnExtra> nonAutoColumnExtras = new ArrayList<>();
         List<String> extrasStr = new ArrayList<>();
         for ( String ext : extras ) {
+
             ColumnExtra extra = new ColumnExtra(ext);
             columnExtras.add(new ColumnExtra(ext));
             if ( !extra.isAuto() ) {
@@ -88,12 +90,21 @@ public class DocumentMeta {
     /**
      *
      * @param tableName
-     * @param <T>
      * @return
      */
-    public static <T> DocumentMeta fromDefault(final String tableName) {
+    public static DocumentMeta fromDefault(final String tableName) {
         return new DocumentMeta(tableName,DEFAULT_COLUMN,DEFAULT_ID,DEFAULT_EXTRAS);
 
     }
 
+
+    @Override
+    public String toString() {
+        return "DocumentMeta{" +
+                "tableName='" + tableName + '\'' +
+                ", columnName='" + columnName + '\'' +
+                ", idField='" + idField + '\'' +
+                ", extras=" + Arrays.toString(extras) +
+                '}';
+    }
 }

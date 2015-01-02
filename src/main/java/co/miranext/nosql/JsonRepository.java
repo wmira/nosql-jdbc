@@ -1,14 +1,14 @@
-package co.miranext.docdb;
+package co.miranext.nosql;
 
 import java.util.List;
 
 /**
- * DocumentRepository instance that manages persistance of
+ * JsonRepository instance that manages persistance of
  * json objects via rdbms
  *
  *
  */
-public interface DocumentRepository {
+public interface JsonRepository {
 
 
     /**

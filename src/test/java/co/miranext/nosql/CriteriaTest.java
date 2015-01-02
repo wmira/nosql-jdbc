@@ -1,8 +1,9 @@
-package co.miranext.docdb;
+package co.miranext.nosql;
 
-import co.miranext.docdb.postgresql.PgsqlDocumentRepository;
-import co.miranext.docdb.postgresql.PsqlJsonFieldCriterion;
-import co.miranext.docdb.sql.SQLBuilder;
+import co.miranext.nosql.postgresql.PgsqlJsonRepository;
+import co.miranext.nosql.postgresql.PgsqlJsonFieldCriterion;
+import co.miranext.nosql.query.SQLObjectQuery;
+import co.miranext.nosql.sql.SQLBuilder;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
 import org.junit.Test;
@@ -22,14 +23,9 @@ public class CriteriaTest {
 
         assertEquals("column",cr.getColumn());
         assertEquals("test",cr.getValue());
-        assertEquals("column=?",cr.toSQLString());
+        assertEquals("column=?",cr.toSQLString(null));
 
-        FieldCriterion fieldCriterion = new PsqlJsonFieldCriterion("column","id","abc");
-
-        assertEquals("id",fieldCriterion.getField());
-        assertEquals("abc",fieldCriterion.getValue());
-        assertEquals("column->>'id'=?",fieldCriterion.toSQLString());
-
+        FieldCriterion fieldCriterion = new FieldCriterion("id","abc"); //new PsqlJsonFieldCriterion("column","id","abc");
 
         Criteria criteria = new Criteria();
         criteria.add(cr);
@@ -38,7 +34,8 @@ public class CriteriaTest {
 
         Samp document = new Samp();
         Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
-        assertEquals("column=?" + SQLBuilder.SQL_STMT_DELIM + "column->>'id'=?", new SQLBuilder<>(DocumentMeta.fromAnnotation(Samp.class),fields,document ));
+        assertEquals("column=?" + SQLBuilder.SQL_AND_DELIMITER + "data->>'id'=?", SQLObjectQuery.toSQLCriteriaFilter(null,DocumentMeta.fromAnnotation(document.getClass()),criteria,
+                PgsqlJsonRepository.CRITERION_TRANSFORMER));
 
         ColumnExtra extra = new ColumnExtra("col");
         ColumnExtra extraAuto = new ColumnExtra("auto:record_id");
@@ -56,7 +53,7 @@ public class CriteriaTest {
 
 
         Criteria criteria = new Criteria();
-        criteria.add(new PsqlJsonFieldCriterion("column","id","abc"));
+        criteria.add(new PgsqlJsonFieldCriterion("column","id","abc"));
 
         DocumentMeta meta = new DocumentMeta("tbl","data","id",new String[]{"auto:record","account_id"});
 

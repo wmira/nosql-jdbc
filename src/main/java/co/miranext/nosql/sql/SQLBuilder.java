@@ -1,6 +1,7 @@
-package co.miranext.docdb.sql;
+package co.miranext.nosql.sql;
 
-import co.miranext.docdb.*;
+import co.miranext.nosql.*;
+import co.miranext.nosql.query.SQLObjectQuery;
 import com.google.common.base.CaseFormat;
 import org.boon.core.reflection.fields.FieldAccess;
 
@@ -15,8 +16,8 @@ import java.util.Map;
  */
 public class SQLBuilder<T> {
 
-    public static String SQL_STMT_DELIM = " , ";
-    public static String SQL_AND_DELIMITER = " AND ";
+    public static String SQL_STMT_DELIM = SQLObjectQuery.SQL_STMT_DELIM;
+    public static String SQL_AND_DELIMITER = SQLObjectQuery.SQL_AND_DELIMITER;
 
     private String sqlQuery;
     private Map<Integer,String> indexMapping;
@@ -71,7 +72,7 @@ public class SQLBuilder<T> {
         }
 
         FieldCriterion fd = transformer.idFieldCriterion(meta,idVal);
-        StringBuilder builder = new StringBuilder("UPDATE " + meta.getTableName() + " SET " + meta.getColumnName() + "=? WHERE " + fd.toSQLString());
+        StringBuilder builder = new StringBuilder("UPDATE " + meta.getTableName() + " SET " + meta.getColumnName() + "=? WHERE " + fd.toSQLString(null));
 
         indexMapping.put(1,meta.getColumnName());
         indexMapping.put(2,meta.getIdField());
@@ -235,15 +236,11 @@ public class SQLBuilder<T> {
                 toprocess = transformer.transform(meta,(FieldCriterion)toprocess);
             }
 
-            strings.add(toprocess.toSQLString());
+            strings.add(toprocess.toSQLString(null));
         }
 
         return SQLBuilder.join(strings.toArray(new String[strings.size()]),SQL_AND_DELIMITER);
     }
 
-    public interface FieldCriterionTransformer {
-        public FieldCriterion transform(final DocumentMeta meta,final FieldCriterion criterion);
 
-        public FieldCriterion idFieldCriterion(final DocumentMeta meta,String value);
-    }
 }

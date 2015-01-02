@@ -1,4 +1,4 @@
-package co.miranext.docdb;
+package co.miranext.nosql;
 
 /**
  *
@@ -32,7 +32,7 @@ public class FieldCriterion implements Criterion {
         this.value = value;
     }
 
-    public String toSQLString() {
+    public String toSQLString(final String alias) {
         throw new RuntimeException("Not implemented");
     }
 

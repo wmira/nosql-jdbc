@@ -1,7 +1,9 @@
-package co.miranext.docdb.postgresql;
+package co.miranext.nosql.postgresql;
 
-import co.miranext.docdb.*;
-import co.miranext.docdb.sql.SQLBuilder;
+import co.miranext.nosql.*;
+import co.miranext.nosql.query.SQLColumnQuery;
+import co.miranext.nosql.query.SQLObjectQuery;
+import co.miranext.nosql.sql.SQLBuilder;
 import com.google.common.base.CaseFormat;
 import org.boon.core.TypeType;
 import org.boon.core.reflection.BeanUtils;
@@ -16,9 +18,9 @@ import java.sql.*;
 import java.util.*;
 
 /**
- * Postgresql implementation of DocumentRepository
+ * Postgresql implementation of JsonRepository
  */
-public class PgsqlDocumentRepository implements DocumentRepository {
+public class PgsqlJsonRepository implements JsonRepository {
 
 
 
@@ -29,7 +31,7 @@ public class PgsqlDocumentRepository implements DocumentRepository {
      *
      * @param dataSource
      */
-    public PgsqlDocumentRepository(final DataSource dataSource) {
+    public PgsqlJsonRepository(final DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
@@ -54,7 +56,7 @@ public class PgsqlDocumentRepository implements DocumentRepository {
 
     @Override
     public <T> T findOne(Class<T> document, Criteria criteria) {
-        return this.findInternal(DocumentMeta.fromAnnotation(document),document, criteria != null ? criteria : new Criteria());
+        return this.findInternal(document, criteria != null ? criteria : new Criteria());
     }
 
     @Override
@@ -190,6 +192,7 @@ public class PgsqlDocumentRepository implements DocumentRepository {
             ResultSet rs = pstmt.executeQuery();
 
             while ( rs.next() ) {
+
                 T instance =  jsonDataToInstance(meta, document, rs);
                 //populate the values with extras if available
                 populateWithExtras(instance,rs,meta,fields);
@@ -201,21 +204,6 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         }
         return results;
 
-    }
-
-    private static Field extractField( final String column, final Map<String,FieldAccess> fields) {
-        String beanField = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,column);
-        FieldAccess fieldAccess = fields.get(beanField);
-
-        if ( fieldAccess == null ) {
-            throw new RuntimeException("Unable to find field access for column extra: '" + column + "' field: '" + beanField + "'");
-        }
-        Field field = fieldAccess.getField();
-
-        if ( field == null ) {
-            throw new RuntimeException("Unable to find field for column extra: '" + column + "' field: '" + beanField + "'");
-        }
-        return field;
     }
 
     private static <T> void populateWithExtras(final T instance, final ResultSet rs,final DocumentMeta meta,final Map<String,FieldAccess> fields ) throws Exception {
@@ -247,6 +235,25 @@ public class PgsqlDocumentRepository implements DocumentRepository {
         }
     }
 
+    private static Field extractField( final String column, final Map<String,FieldAccess> fields) {
+        String beanField = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,column);
+        FieldAccess fieldAccess = fields.get(beanField);
+
+        if ( fieldAccess == null ) {
+            throw new RuntimeException("Unable to find field access for column extra: '" + column + "' field: '" + beanField + "'");
+        }
+        Field field = fieldAccess.getField();
+
+        if ( field == null ) {
+            throw new RuntimeException("Unable to find field for column extra: '" + column + "' field: '" + beanField + "'");
+        }
+        return field;
+    }
+
+
+
+
+
     /**
      *
      * @param criteria
@@ -258,10 +265,142 @@ public class PgsqlDocumentRepository implements DocumentRepository {
     }
 
 
+    /**
+     *
+     *
+
+     * @param document
+     * @param criteria
+     * @param <T>
+     * @return
+     */
+    private <T> T findInternal(final Class<T> document,final Criteria criteria) {
+
+        SQLObjectQuery<T> sqlObjectQuery = new SQLObjectQuery<T>(document);
+
+        try (Connection con = dataSource.getConnection();
+             PreparedStatement pstmt = con.prepareStatement(sqlObjectQuery.toSQLSelectQuery(criteria,CRITERION_TRANSFORMER)) ){
+
+            //populate
+            populateStatement(pstmt,criteria);
+            ResultSet rs = pstmt.executeQuery();
+
+            if ( rs.next() ) {
+                //T value = jsonDataToInstance(meta, document, rs);
+                //populateWithExtras(value,rs,meta,sqlObjectQuery);
+
+                return createDocument(document, sqlObjectQuery, rs);
+
+            }
+        } catch ( Exception e ) {
+            throw new RuntimeException("Error on find: " + e.getMessage(),e);
+        }
+        return null;
+    }
+
+    public static <T> T createDocument(final Class<T> clsdocument,final SQLObjectQuery<T> sqlObjectQuery,
+                                             final ResultSet rs) throws  Exception {
+
+        T instance = createDocumentFromRs(clsdocument,sqlObjectQuery,rs);
+
+        //we need to populate other fields
+        Map<String,DocumentRefMeta> refs = sqlObjectQuery.getFieldRefs();
+        Map<String,SQLObjectQuery> refsQuery = sqlObjectQuery.getRefSQLObjectQuery();
+
+        if ( refs != null && refs.size() > 0 ) {
+            for ( String refKey : refs.keySet() ) {
+                DocumentRefMeta refMeta = refs.get(refKey);
+                SQLObjectQuery refObjectQuery = refsQuery.get(refKey);
+
+                setObjectRef(instance,sqlObjectQuery,refMeta,refObjectQuery,rs);
+            }
+        }
+        return instance;
+    }
+
+    public static <T> void setObjectRef(final T instance,final SQLObjectQuery parentObjectQuery, final DocumentRefMeta refMeta,
+        final SQLObjectQuery refObjectQuery,final ResultSet rs) throws Exception {
+
+        Object ref = createDocumentFromRs(refMeta.getDocumentRef().document(),refObjectQuery,rs);
+        if ( ref == null ) {
+            return;
+        }
+
+        Map<String,FieldAccess> faccessMap = parentObjectQuery.getObjectFields();
+
+        FieldAccess fieldAccess = faccessMap.get(refMeta.getFieldName());
+
+        if ( fieldAccess != null ) {
+            fieldAccess.setObject(instance,ref);
+        }
+
+        FieldAccess fieldIdAccess = faccessMap.get(refMeta.getRefIdFieldName());
+
+        //set the ID
+        DocumentMeta thisMeta = refMeta.getMeta();
+        FieldAccess refFieldAccess = BeanUtils.getField(ref,thisMeta.getIdField());
+
+        if ( refFieldAccess != null ) {
+            Object id = refFieldAccess.getObject(ref);
+            fieldIdAccess.setObject(instance,id);
+        }
+
+
+    }
+
+    public static<T> T createDocumentFromRs(final Class<T> clsdocument,final SQLObjectQuery<T> sqlObjectQuery,
+                                            final ResultSet rs) throws  Exception {
+
+        SQLColumnQuery columnQuery = sqlObjectQuery.getColumnQuery();
+        DocumentMeta meta = sqlObjectQuery.getMeta();
+
+        String jsonStr = rs.getString(columnQuery.getFieldAliasFor(meta.getColumnName()));
+        if ( jsonStr == null ) {
+            return null;
+        }
+        T instance = createInstanceFromJsonString(clsdocument,
+                jsonStr);
+        //now extras
+        ColumnExtra[] extras = meta.getColumnExtras();
+
+        Map<String,FieldAccess> fields = sqlObjectQuery.getObjectFields();
+
+        for ( ColumnExtra extra : extras ) {
+            String rsColumn = columnQuery.getFieldAliasFor(extra.getColumn());
+            String column =  extra.getColumn();
+            //Object rsData = rs.getObject(column);
+            String beanField = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,column);
+
+            Field field = extractField(column,fields);
+            FieldAccess fas = fields.get(beanField);
+            TypeType type = fas.typeEnum();
+
+            Object rsVal;
+            if ( TypeType.LONG.equals(type) || TypeType.LONG_WRAPPER.equals(type) )  {
+                rsVal = rs.getLong(rsColumn);
+            } else if ( TypeType.INTEGER_WRAPPER.equals(type) || TypeType.INT.equals(type) ) {
+                rsVal = rs.getInt(rsColumn);
+            } else if ( TypeType.STRING.equals(type) ) {
+                rsVal = rs.getString(rsColumn);
+            } else {
+                throw new RuntimeException("don't know what to do: " + type + " for column: '" + column + "'");
+            }
+
+            field.set(instance,rsVal);
+        }
+
+        return instance;
+    }
+    public static <T> T createInstanceFromJsonString(final Class<T> document,final String jsonData) {
+        ObjectMapper mapper =  JsonFactory.create();
+        return mapper.readValue(jsonData,document);
+    }
+
+    /*
     private <T> T findInternal(final DocumentMeta meta, final Class<T> document,final Criteria criteria) {
 
         String query = getSelectQueryString(criteria, meta);
-
+        Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
         try (Connection con = dataSource.getConnection();
              PreparedStatement pstmt = con.prepareStatement(query) ){
 
@@ -271,13 +410,15 @@ public class PgsqlDocumentRepository implements DocumentRepository {
 
             if ( rs.next() ) {
                 T value = jsonDataToInstance(meta, document, rs);
+                populateWithExtras(value,rs,meta,fields);
                 return value;
             }
         } catch ( Exception e ) {
             throw new RuntimeException("Error on find: " + e.getMessage(),e);
         }
         return null;
-    }
+    }*/
+
 
     private <T> T jsonDataToInstance(DocumentMeta meta, Class<T> document, ResultSet rs) throws SQLException {
         String jsonStr = rs.getString(meta.getColumnName());
@@ -288,9 +429,9 @@ public class PgsqlDocumentRepository implements DocumentRepository {
     private <T> T findInternal(Class<T> document, final String id, Criteria criteria) {
 
         DocumentMeta meta = DocumentMeta.fromAnnotation(document);
-        PsqlJsonFieldCriterion idCriterion = new PsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),id);
+        PgsqlJsonFieldCriterion idCriterion = new PgsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),id);
         criteria.add(idCriterion);
-        return findInternal(meta,document,criteria);
+        return findInternal(document,criteria);
     }
 
     //utils
@@ -309,15 +450,15 @@ public class PgsqlDocumentRepository implements DocumentRepository {
 
     }
 
-    private static SQLBuilder.FieldCriterionTransformer CRITERION_TRANSFORMER = new SQLBuilder.FieldCriterionTransformer() {
+    public static FieldCriterionTransformer CRITERION_TRANSFORMER = new FieldCriterionTransformer() {
         @Override
         public FieldCriterion transform(final DocumentMeta meta,final FieldCriterion criterion) {
-            return new PsqlJsonFieldCriterion(meta.getColumnName(), criterion.getField(), criterion.getValue());
+            return new PgsqlJsonFieldCriterion(meta.getColumnName(), criterion.getField(), criterion.getValue());
         }
 
         @Override
         public FieldCriterion idFieldCriterion(final DocumentMeta meta,final String value) {
-            return new PsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),value);
+            return new PgsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),value);
         }
     };
 }

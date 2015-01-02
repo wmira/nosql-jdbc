@@ -1,4 +1,4 @@
-package co.miranext.docdb;
+package co.miranext.nosql;
 
 /**
  *
@@ -22,7 +22,11 @@ public class ColumnCriterion implements Criterion {
     }
 
     @Override
-    public String toSQLString() {
-        return column + "=?";
+    public String toSQLString(String alias) {
+        String prefix = "";
+        if ( alias != null ) {
+            prefix = alias + ".";
+        }
+        return prefix + column + "=?";
     }
 }

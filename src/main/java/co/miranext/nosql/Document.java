@@ -1,4 +1,4 @@
-package co.miranext.docdb;
+package co.miranext.nosql;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -41,5 +41,5 @@ public @interface Document {
      *
      * @return
      */
-    String[] extras() default "";
+    String[] extras() default {};
 }

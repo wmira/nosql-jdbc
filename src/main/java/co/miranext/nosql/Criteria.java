@@ -1,6 +1,4 @@
-package co.miranext.docdb;
-
-import co.miranext.docdb.sql.SQLBuilder;
+package co.miranext.nosql;
 
 import java.util.ArrayList;
 import java.util.List;
