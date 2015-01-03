@@ -3,7 +3,6 @@ package co.miranext.nosql.query;
 import co.miranext.nosql.ColumnExtra;
 import co.miranext.nosql.DocumentMeta;
 import co.miranext.nosql.DocumentRefMeta;
-import co.miranext.nosql.sql.SQLBuilder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +50,7 @@ public class SQLColumnQuery {
             queryStrings.add(queryFields.get(column).getQueryAlias());
         }
 
-        this.fieldsQuery = SQLBuilder.join(queryStrings.toArray(new String[queryStrings.size()]), " , ");
+        this.fieldsQuery = SQLObjectQuery.join(queryStrings.toArray(new String[queryStrings.size()]), " , ");
 
         if ( parent != null ) {
             this.joinQuery = //This query is so postgresql specific

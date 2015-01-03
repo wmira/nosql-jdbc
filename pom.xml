@@ -5,8 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>co.miranext</groupId>
-    <artifactId>docdb-jdbc</artifactId>
+    <artifactId>nosql-jdbc</artifactId>
     <version>0.0.1</version>
+
+    <name>docdb-jdbc</name>
+    <description>A Nosql Repository API for RDBMS via JDBC</description>
+    <url>https://github.com/wmira/nosql-jdbc</url>
+
 
     <dependencies>
         <dependency>

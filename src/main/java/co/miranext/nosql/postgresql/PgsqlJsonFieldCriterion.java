@@ -4,7 +4,7 @@ import co.miranext.nosql.FieldCriterion;
 
 /**
  *
- *
+ * TODO: we should just replace this and use directly
  *
  */
 public class PgsqlJsonFieldCriterion extends FieldCriterion {

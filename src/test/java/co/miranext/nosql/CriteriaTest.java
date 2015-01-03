@@ -1,9 +1,7 @@
 package co.miranext.nosql;
 
 import co.miranext.nosql.postgresql.PgsqlJsonRepository;
-import co.miranext.nosql.postgresql.PgsqlJsonFieldCriterion;
 import co.miranext.nosql.query.SQLObjectQuery;
-import co.miranext.nosql.sql.SQLBuilder;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
 import org.junit.Test;
@@ -34,7 +32,7 @@ public class CriteriaTest {
 
         Samp document = new Samp();
         Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
-        assertEquals("column=?" + SQLBuilder.SQL_AND_DELIMITER + "data->>'id'=?", SQLObjectQuery.toSQLCriteriaFilter(null,DocumentMeta.fromAnnotation(document.getClass()),criteria,
+        assertEquals("column=?" + SQLObjectQuery.SQL_AND_DELIMITER + "data->>'id'=?", SQLObjectQuery.toSQLCriteriaFilter(null,DocumentMeta.fromAnnotation(document.getClass()),criteria,
                 PgsqlJsonRepository.CRITERION_TRANSFORMER));
 
         ColumnExtra extra = new ColumnExtra("col");
@@ -48,20 +46,7 @@ public class CriteriaTest {
         assertTrue(extraAuto.isAuto());
     }
 
-    @Test
-    public void testSqlBuilder() {
 
-
-        Criteria criteria = new Criteria();
-        criteria.add(new PgsqlJsonFieldCriterion("column","id","abc"));
-
-        DocumentMeta meta = new DocumentMeta("tbl","data","id",new String[]{"auto:record","account_id"});
-
-        String builderSelectRes = "SELECT data  , record , account_id FROM tbl  WHERE column->>'id'=?";
-
-        assertEquals(builderSelectRes,SQLBuilder.createSqlSelect(meta,criteria,null));
-
-    }
 }
 
 @Document(table="samp")

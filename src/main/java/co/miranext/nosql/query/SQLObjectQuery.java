@@ -1,7 +1,6 @@
 package co.miranext.nosql.query;
 
 import co.miranext.nosql.*;
-import co.miranext.nosql.sql.SQLBuilder;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
 
@@ -91,6 +90,14 @@ public class SQLObjectQuery<T> {
     public String toSQLSelectQuery() {
         return toSQLSelectQuery(null,null);
     }
+
+    /**
+     *
+     *
+     * @param criteria
+     * @param transformer
+     * @return
+     */
     public String toSQLSelectQuery(final Criteria criteria,final FieldCriterionTransformer transformer) {
 
         boolean hasRefs = this.refsColumnQuery != null && this.refsColumnQuery.size() > 0;
@@ -106,7 +113,7 @@ public class SQLObjectQuery<T> {
         }
 
         sb.append("SELECT ");
-        sb.append(SQLBuilder.join(fieldSelects.toArray(new String[fieldSelects.size()]), " , "));
+        sb.append(SQLObjectQuery.join(fieldSelects.toArray(new String[fieldSelects.size()]), SQL_STMT_DELIM));
 
         sb.append(" FROM ");
         sb.append(columnQuery.toFromQuery());
@@ -133,6 +140,15 @@ public class SQLObjectQuery<T> {
         return this.alias.aliasFor(meta.getTableName());
     }
 
+    /**
+     * Helper to create criteria filter
+     *
+     * @param alias
+     * @param meta
+     * @param criteria
+     * @param transformer
+     * @return
+     */
     public final static String toSQLCriteriaFilter(final String alias,final DocumentMeta meta,final Criteria criteria,final FieldCriterionTransformer transformer) {
         List<String> strings = new ArrayList<String>();
 
@@ -144,9 +160,22 @@ public class SQLObjectQuery<T> {
             strings.add(toprocess.toSQLString(alias));
         }
 
-        return SQLBuilder.join(strings.toArray(new String[strings.size()]),SQL_AND_DELIMITER);
+        return SQLObjectQuery.join(strings.toArray(new String[strings.size()]),SQL_AND_DELIMITER);
     }
 
+    public static String join(final String[] strings,String joinString) {
+
+        StringBuilder sb = new StringBuilder();
+        for ( int i=0; i < strings.length; i++ ) {
+            sb.append(strings[i]);
+            if ( i != strings.length -1 ) {
+                sb.append(joinString);
+            }
+
+        }
+        return sb.toString();
+
+    }
 
 
 }

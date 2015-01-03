@@ -2,8 +2,8 @@ package co.miranext.nosql.postgresql;
 
 import co.miranext.nosql.*;
 import co.miranext.nosql.query.SQLColumnQuery;
+import co.miranext.nosql.query.SQLDMLObject;
 import co.miranext.nosql.query.SQLObjectQuery;
-import co.miranext.nosql.sql.SQLBuilder;
 import com.google.common.base.CaseFormat;
 import org.boon.core.TypeType;
 import org.boon.core.reflection.BeanUtils;
@@ -73,41 +73,15 @@ public class PgsqlJsonRepository implements JsonRepository {
     @Override
     public <T> void saveOrUpdate(T document) {
 
-        DocumentMeta meta = DocumentMeta.fromAnnotation(document.getClass());
-        Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
-
-        FieldAccess idFieldAccess = fields.get(meta.getIdField());
-        Field field = idFieldAccess.getField();
-        //we only use UUID
-        Object id = null;
-        try {
-            id = field.get(document);
-        } catch ( Exception e ) {
-            throw new RuntimeException("Unable to retrieve id: " + e.getMessage() ,e);
-        }
-        if ( id == null ) {
-            try {
-                field.set(document, UUID.randomUUID().toString());
-            } catch ( Exception e ) {
-                throw new RuntimeException("Unable to set id: " + e.getMessage(), e);
-            }
-        }
-
-        SQLBuilder sql = new SQLBuilder(meta,fields,document);
-        Map<String,Object> extraValues = SQLBuilder.generateExtraValues(document,true,meta,fields);
-        if ( id == null ) {
-            sql.generateInsert();
-        } else {
-            sql.generateUpdate(CRITERION_TRANSFORMER);
-            extraValues.put(meta.getIdField(),id);
-        }
-
-        String sqlQuery = sql.getSqlQuery();
+        final SQLDMLObject dmlObj = new SQLDMLObject(document,CRITERION_TRANSFORMER);
+        final String sqlQuery = dmlObj.getSqlQuery();
+        final DocumentMeta meta = dmlObj.getDocumentMeta();
+        final Map<String,Object> extraValues = dmlObj.getExtraValues();
 
         try (Connection con = dataSource.getConnection();
              PreparedStatement pstmt = con.prepareStatement(sqlQuery) ){
 
-            Map<Integer,String> mapping = sql.getIndexMapping();
+            Map<Integer,String> mapping = dmlObj.getIndexMapping();
 
             for ( Integer idx : mapping.keySet() ) {
                 String name = mapping.get(idx);
@@ -115,7 +89,7 @@ public class PgsqlJsonRepository implements JsonRepository {
                     PGobject jsonObj = toPGObject(toJsonString(document));
                     pstmt.setObject(idx,jsonObj,valueToSqlType(jsonObj));
                 } else {
-                    //FIXME, i think we should allow to set values of extras to be passed in and not be set on the document
+                    //TODO, i think we should allow to set values of extras to be passed in and not be set on the document
                     Object val = extraValues.get(name);
                     pstmt.setObject(idx,extraValues.get(name),valueToSqlType(val));
                 }
@@ -178,62 +152,28 @@ public class PgsqlJsonRepository implements JsonRepository {
 
     private <T> List<T> findAsList(Class<T> document,Criteria criteria)  {
 
-        DocumentMeta meta = DocumentMeta.fromAnnotation(document);
-        Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
-
+        SQLObjectQuery<T> sqlObjectQuery = new SQLObjectQuery<T>(document);
         List<T> results = new ArrayList<T>();
-        String query = getSelectQueryString(criteria, meta);
 
         try (Connection con = dataSource.getConnection();
-             PreparedStatement pstmt = con.prepareStatement(query) ){
+             PreparedStatement pstmt = con.prepareStatement(sqlObjectQuery.toSQLSelectQuery(criteria,CRITERION_TRANSFORMER)) ){
 
             //populate
             populateStatement(pstmt,criteria);
             ResultSet rs = pstmt.executeQuery();
 
             while ( rs.next() ) {
-
-                T instance =  jsonDataToInstance(meta, document, rs);
-                //populate the values with extras if available
-                populateWithExtras(instance,rs,meta,fields);
-
-                results.add( instance );
+                results.add( createDocument(document, sqlObjectQuery, rs));
             }
         } catch ( Exception e ) {
             throw new RuntimeException("Error on find: " + e.getMessage(),e);
         }
         return results;
 
+
     }
 
-    private static <T> void populateWithExtras(final T instance, final ResultSet rs,final DocumentMeta meta,final Map<String,FieldAccess> fields ) throws Exception {
 
-        ColumnExtra[] extras = meta.getColumnExtras();
-
-        for ( ColumnExtra extra : extras ) {
-
-            String column = extra.getColumn();
-            String beanField = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,column);
-            Field field = extractField(column,fields);
-            FieldAccess fas = fields.get(beanField);
-            TypeType type = fas.typeEnum();
-
-
-
-            Object rsVal;
-            if ( TypeType.LONG.equals(type) || TypeType.LONG_WRAPPER.equals(type) )  {
-                rsVal = rs.getLong(column);
-            } else if ( TypeType.INTEGER_WRAPPER.equals(type) || TypeType.INT.equals(type) ) {
-                rsVal = rs.getInt(column);
-            } else if ( TypeType.STRING.equals(type) ) {
-                rsVal = rs.getString(column);
-            } else {
-                throw new RuntimeException("don't know what to do: " + type + " for column: '" + column + "'");
-            }
-
-            field.set(instance,rsVal);
-        }
-    }
 
     private static Field extractField( final String column, final Map<String,FieldAccess> fields) {
         String beanField = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,column);
@@ -248,20 +188,6 @@ public class PgsqlJsonRepository implements JsonRepository {
             throw new RuntimeException("Unable to find field for column extra: '" + column + "' field: '" + beanField + "'");
         }
         return field;
-    }
-
-
-
-
-
-    /**
-     *
-     * @param criteria
-     * @param meta
-     * @return
-     */
-    private String getSelectQueryString(final Criteria criteria, final DocumentMeta meta) {
-        return SQLBuilder.createSqlSelect(meta, criteria, CRITERION_TRANSFORMER);
     }
 
 
@@ -286,9 +212,6 @@ public class PgsqlJsonRepository implements JsonRepository {
             ResultSet rs = pstmt.executeQuery();
 
             if ( rs.next() ) {
-                //T value = jsonDataToInstance(meta, document, rs);
-                //populateWithExtras(value,rs,meta,sqlObjectQuery);
-
                 return createDocument(document, sqlObjectQuery, rs);
 
             }
@@ -396,35 +319,6 @@ public class PgsqlJsonRepository implements JsonRepository {
         return mapper.readValue(jsonData,document);
     }
 
-    /*
-    private <T> T findInternal(final DocumentMeta meta, final Class<T> document,final Criteria criteria) {
-
-        String query = getSelectQueryString(criteria, meta);
-        Map<String,FieldAccess> fields = BeanUtils.getFieldsFromObject(document);
-        try (Connection con = dataSource.getConnection();
-             PreparedStatement pstmt = con.prepareStatement(query) ){
-
-            //populate
-            populateStatement(pstmt,criteria);
-            ResultSet rs = pstmt.executeQuery();
-
-            if ( rs.next() ) {
-                T value = jsonDataToInstance(meta, document, rs);
-                populateWithExtras(value,rs,meta,fields);
-                return value;
-            }
-        } catch ( Exception e ) {
-            throw new RuntimeException("Error on find: " + e.getMessage(),e);
-        }
-        return null;
-    }*/
-
-
-    private <T> T jsonDataToInstance(DocumentMeta meta, Class<T> document, ResultSet rs) throws SQLException {
-        String jsonStr = rs.getString(meta.getColumnName());
-        ObjectMapper mapper =  JsonFactory.create();
-        return mapper.readValue(jsonStr,document);
-    }
 
     private <T> T findInternal(Class<T> document, final String id, Criteria criteria) {
 
