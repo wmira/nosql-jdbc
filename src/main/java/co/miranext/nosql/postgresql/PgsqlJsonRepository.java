@@ -125,8 +125,9 @@ public class PgsqlJsonRepository implements JsonRepository {
 
             return Types.BIGINT;
         } else if ( value instanceof PGobject ) {
-
             return Types.OTHER;
+        } else if ( value instanceof Timestamp ) {
+            return Types.TIMESTAMP;
         } //FIXME: COMPLETE This
         throw new RuntimeException("Type not supported: " + value);
     }

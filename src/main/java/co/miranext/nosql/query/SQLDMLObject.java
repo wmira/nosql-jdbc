@@ -8,10 +8,7 @@ import com.google.common.base.CaseFormat;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Insert and Update helpers
@@ -43,6 +40,8 @@ public class SQLDMLObject<T> {
         extraValues  = generateExtraValues(documentInstance,true,this.documentMeta,fieldAccess);
 
         if ( id == null ) {
+            id = UUID.randomUUID().toString();
+            fieldAccess.get("id").setObject(documentInstance,id);
             sqlQuery = generateInsert(documentMeta,indexMapping);
         } else {
             sqlQuery = generateUpdate(documentInstance,documentMeta,indexMapping,transformer);
