@@ -42,7 +42,7 @@ class Channel {
   public String getName() {
     return this.name;
   }
-  public void setName() {
+  public void setName(final String name) {
     this.name = name;
   }
 }
@@ -66,10 +66,10 @@ class Personnel {
   }
 
   public String getFullname() {
-    return this.name;
+    return this.fullname;
   }
-  public void setFullname() {
-    this.name = name;
+  public void setFullname(final String fullname) {
+    this.fullname = fullname;
   }
 }
 ```
