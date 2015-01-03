@@ -1,5 +1,7 @@
 package co.miranext.nosql;
 
+import co.miranext.nosql.testbean.Channel;
+import co.miranext.nosql.testbean.DocOverrideTable;
 import co.miranext.nosql.testbean.Parent;
 import co.miranext.nosql.testbean.ParentWithExtras;
 import org.junit.Test;
@@ -22,6 +24,8 @@ public class DocumentMetaTest {
         assertArrayEquals(new String[]{}, meta.getExtras());
         assertArrayEquals(new ColumnExtra[]{}, meta.getColumnExtras());
 
+        DocumentMeta meta2 = DocumentMeta.fromAnnotation(DocOverrideTable.class);
+        assertEquals("someother_tablename",meta2.getTableName());
     }
 
 

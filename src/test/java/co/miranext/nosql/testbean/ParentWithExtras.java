@@ -5,7 +5,7 @@ import co.miranext.nosql.Document;
 /**
  *
  */
-@Document(table="parent_with_extras",extras = {"auto:record_id","owner_id"})
+@Document(extras = {"auto:record_id","owner_id"})
 public class ParentWithExtras {
 
     private String id;

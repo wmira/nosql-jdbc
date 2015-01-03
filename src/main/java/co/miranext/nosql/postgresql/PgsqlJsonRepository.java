@@ -244,7 +244,7 @@ public class PgsqlJsonRepository implements JsonRepository {
     public static <T> void setObjectRef(final T instance,final SQLObjectQuery parentObjectQuery, final DocumentRefMeta refMeta,
         final SQLObjectQuery refObjectQuery,final ResultSet rs) throws Exception {
 
-        Object ref = createDocumentFromRs(refMeta.getDocumentRef().document(),refObjectQuery,rs);
+        Object ref = createDocumentFromRs(refMeta.document(),refObjectQuery,rs);
         if ( ref == null ) {
             return;
         }

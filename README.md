@@ -7,51 +7,93 @@ A NoSQL Repository API for RDBMS that supports JSON types. Current implementatio
 
 ## Usage
 
-```java
+### Create base tables
 
-//Initialize using DataSource.
-DataSource ds = ...
-JsonRepository docRepo = new PgsqlJsonRepository(ds);
+```sql
+
+CREATE TABLE channel (
+  data jsonb NOT NULL
+)
+
+CREATE TABLE personnel (
+  data jsonb NOT NULL
+)
 
 ```
+
+### Objects
 
 ```java
 
 @Document
-public Product {
- 
+class Channel {
+
   private String id;
   private String name;
-  private String description;
-  private String category;
-  
-  public String getId() { ... }
-  public String getName() { ... }
-  public String getDescription() { ... }
-  public String getCategory() { ... }
-  
-  public void setId() { ... }
-  public void setName() { ... }
-  public void setDescription() { ... }
-  public void setCategory() { ... }
+
+  public String getId() {
+     return this.id;
+  }
+
+  public void setId() {
+    this.id = id;
+  }
+
+  public String getName() {
+    return this.name;
+  }
+  public void setName() {
+    this.name = name;
+  }
 }
 
+@Document
+class Personnel {
+
+  private String id;
+  private String fullname;
+  private String defaultChannelId;
+
+  @DocumentRef
+  private Channel defaultChannel;
+
+  public String getId() {
+    return this.id;
+  }
+
+  public void setId() {
+    this.id = id;
+  }
+
+  public String getFullname() {
+    return this.name;
+  }
+  public void setFullname() {
+    this.name = name;
+  }
+}
 ```
 
 ```java
 
-//persist
-docRepo.save(product);
+//Initialize using DataSource.
+DataSource ds = ...
+JsonRepository jsonRepo = new PgsqlJsonRepository(ds);
 
-//find single
-Product product = docRepo.find(Product.class,productId);
 
-//find all products with beer category
-Criteria criteria = new Criteria();
-criteria.add(new FieldCriterion("category","beer");
-List<Product> products = docRepo.find(Product.class,criteria);
+//find
+jsonRepo.find(Personnel.class,"id");
+jsonRepo.find(Personnel.class,new Criteria().add(new FieldCriterion("fullName","somename")));
+
+//save or update
+jsonRepo.saveOrUpdate(new Channel());
+jsonRepo.saveOrUpdate(new Personnel());
 
 ```
+
+## Requirements
+1. Jdk 1.7+
+2. A Database that supports json types (current implementation only for Postgresql 9.4)
 
 ## Todo
 1. More Unit Tests

@@ -60,8 +60,8 @@ public class SQLObjectQuery<T> {
 
             for ( String documentRefKey : this.fieldRefs.keySet() ) {
                 DocumentRefMeta refMeta = this.fieldRefs.get(documentRefKey);
-                DocumentRef ref = refMeta.getDocumentRef();
-                Class<T> cls = ref.document();
+                //DocumentRef ref = refMeta.getDocumentRef();
+                Class<T> cls = refMeta.document();
                 SQLObjectQuery cobjectQuery = new SQLObjectQuery(cls,alias,false);
                 referenceObjectQuery.put(documentRefKey,cobjectQuery);
                 refsColumnQuery.put(documentRefKey,new SQLColumnQuery(cobjectQuery,refMeta,this));

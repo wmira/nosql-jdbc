@@ -13,25 +13,42 @@ import java.util.Map;
  */
 public class DocumentRefMeta {
 
-    private DocumentRef documentRef;
-    private String refIdFieldName;
-    private String fieldName;
-    private DocumentMeta meta;
+    private final String refIdFieldName;
+    private final String fieldName;
+    private final DocumentMeta meta;
+    private final Class type;
+    private final Class fieldType;
 
-    public DocumentRefMeta(final DocumentRef documentRef,final  String fieldName,final  String refIdFieldName) {
-        this.documentRef = documentRef;
+    /**
+     *
+     *
+     * @param docType The document
+     * @param fieldType The field
+     * @param fieldName
+     * @param refIdFieldName
+     */
+    public DocumentRefMeta(final Class docType,final Class fieldType,final  String fieldName,final  String refIdFieldName) {
+
+        if ( docType.equals(Void.class) ) {
+            this.type = fieldType;
+        } else {
+            type = docType;
+        }
+        this.fieldType =fieldType;
         this.refIdFieldName = refIdFieldName;
         this.fieldName = fieldName;
-        this.meta = DocumentMeta.fromAnnotation(documentRef.document());
+        this.meta = DocumentMeta.fromAnnotation(this.type);
+
     }
 
+
+    public Class document() {
+        return this.type;
+    }
     public DocumentMeta getMeta() {
         return meta;
     }
 
-    public DocumentRef getDocumentRef() {
-        return documentRef;
-    }
 
     public String getRefIdFieldName() {
         return refIdFieldName;
@@ -62,7 +79,7 @@ public class DocumentRefMeta {
                 if ( refMetas == null ) {
                     refMetas = new HashMap<>();
                 }
-                DocumentRefMeta refMeta = new DocumentRefMeta(docRef,beanField,beanField + "Id" );
+                DocumentRefMeta refMeta = new DocumentRefMeta(docRef.document(),field.getType(),beanField,beanField + "Id" );
                 refMetas.put(beanField,refMeta);
             }
 

@@ -31,7 +31,7 @@ public class DocumentRefTest {
 
         DocumentRefMeta refMeta = metas.get("singleChild");
         assertNotNull("key should be singleChild",refMeta);
-        assertTrue(refMeta.getDocumentRef().document().equals(SingleChild.class));
+        assertTrue(refMeta.document().equals(SingleChild.class));
         assertEquals("singleChild",refMeta.getFieldName());
         assertEquals("singleChildId", refMeta.getRefIdFieldName());
 

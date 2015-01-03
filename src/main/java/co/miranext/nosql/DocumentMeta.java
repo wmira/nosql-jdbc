@@ -1,5 +1,7 @@
 package co.miranext.nosql;
 
+import com.google.common.base.CaseFormat;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,22 +15,23 @@ public class DocumentMeta {
     public final static String DEFAULT_ID = "id";
     public final static String DEFAULT_EXTRAS[] = new String[]{};
 
-    private String tableName;
-    private String columnName;
-    private String idField;
-    private String[] extras;
+    private final String tableName;
+    private final String columnName;
+    private final String idField;
+    private final String[] extras;
 
-    private ColumnExtra[] columnExtras;
-    private ColumnExtra[] nonAutoColumnExtras;
+    private final ColumnExtra[] columnExtras;
+    private final ColumnExtra[] nonAutoColumnExtras;
 
     /**
      *
      */
     public DocumentMeta(final String tableName,final String columnName,final String idField, final String[] extras) {
+
+
         this.tableName = tableName;
         this.columnName = columnName;
         this.idField = idField;
-        this.extras = extras;
 
         List<ColumnExtra> columnExtras = new ArrayList<>();
         List<ColumnExtra> nonAutoColumnExtras = new ArrayList<>();
@@ -81,11 +84,15 @@ public class DocumentMeta {
         if ( document == null ) {
             throw new RuntimeException("Class: " + cls.getName() + " has no @Document annotation.");
         }
+        String table = document.table();
+        if ( table == null || "".equals(table.trim()) ) {
+            String clsName = cls.getSimpleName();
+            table = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE,clsName);
+        }
 
-        return new DocumentMeta(document.table(),document.column(),document.id(),document.extras());
+        return new DocumentMeta(table,document.column(),document.id(),document.extras());
 
     }
-
 
     /**
      *

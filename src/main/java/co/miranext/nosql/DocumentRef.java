@@ -18,7 +18,7 @@ public @interface DocumentRef {
      *
      * @return
      */
-    Class document();
+    Class document() default Void.class;
 
 
 }

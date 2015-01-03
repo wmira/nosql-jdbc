@@ -6,7 +6,7 @@ import co.miranext.nosql.DocumentRef;
 /**
  *
  */
-@Document(table="parent")
+@Document
 public class Parent {
 
     private String id;

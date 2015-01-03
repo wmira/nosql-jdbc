@@ -19,7 +19,7 @@ public @interface Document {
      *
      * @return
      */
-    String table();
+    String table() default "";
 
     /**
      * The column to use that is usually of type json
