@@ -2,13 +2,12 @@ package co.miranext.nosql.query;
 
 import co.miranext.nosql.ColumnExtra;
 import co.miranext.nosql.DocumentMeta;
-import co.miranext.nosql.FieldCriterion;
-import co.miranext.nosql.FieldCriterionTransformer;
+import co.miranext.nosql.criteria.FieldCriterion;
+import co.miranext.nosql.criteria.FieldCriterionTransformer;
 import com.google.common.base.CaseFormat;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

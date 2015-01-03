@@ -1,6 +1,10 @@
 package co.miranext.nosql.query;
 
 import co.miranext.nosql.*;
+import co.miranext.nosql.criteria.Criteria;
+import co.miranext.nosql.criteria.Criterion;
+import co.miranext.nosql.criteria.FieldCriterion;
+import co.miranext.nosql.criteria.FieldCriterionTransformer;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
 

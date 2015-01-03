@@ -1,6 +1,6 @@
 package co.miranext.nosql.postgresql;
 
-import co.miranext.nosql.FieldCriterion;
+import co.miranext.nosql.criteria.FieldCriterion;
 
 /**
  *

@@ -1,5 +1,8 @@
 package co.miranext.nosql;
 
+import co.miranext.nosql.criteria.ColumnCriterion;
+import co.miranext.nosql.criteria.Criteria;
+import co.miranext.nosql.criteria.FieldCriterion;
 import co.miranext.nosql.postgresql.PgsqlJsonRepository;
 import co.miranext.nosql.query.SQLObjectQuery;
 import org.boon.core.reflection.BeanUtils;

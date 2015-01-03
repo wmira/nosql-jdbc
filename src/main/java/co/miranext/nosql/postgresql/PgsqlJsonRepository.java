@@ -1,6 +1,10 @@
 package co.miranext.nosql.postgresql;
 
 import co.miranext.nosql.*;
+import co.miranext.nosql.criteria.Criteria;
+import co.miranext.nosql.criteria.Criterion;
+import co.miranext.nosql.criteria.FieldCriterion;
+import co.miranext.nosql.criteria.FieldCriterionTransformer;
 import co.miranext.nosql.query.SQLColumnQuery;
 import co.miranext.nosql.query.SQLDMLObject;
 import co.miranext.nosql.query.SQLObjectQuery;
@@ -136,7 +140,7 @@ public class PgsqlJsonRepository implements JsonRepository {
         for ( int i=0; i < size; i++ ) {
             Criterion criterion = criterionList.get(i);
             Object value = criterion.getValue();
-            if ( criterion instanceof  FieldCriterion ) {
+            if ( criterion instanceof FieldCriterion) {
                 //for postgresql, all FieldCriterion are strings
                 if ( value != null ) {
                     pstmt.setString(pstmtIdx++, value.toString());
@@ -203,7 +207,6 @@ public class PgsqlJsonRepository implements JsonRepository {
     private <T> T findInternal(final Class<T> document,final Criteria criteria) {
 
         SQLObjectQuery<T> sqlObjectQuery = new SQLObjectQuery<T>(document);
-
         try (Connection con = dataSource.getConnection();
              PreparedStatement pstmt = con.prepareStatement(sqlObjectQuery.toSQLSelectQuery(criteria,CRITERION_TRANSFORMER)) ){
 

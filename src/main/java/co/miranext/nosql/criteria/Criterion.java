@@ -1,4 +1,4 @@
-package co.miranext.nosql;
+package co.miranext.nosql.criteria;
 
 /**
  * Created by miranext on 12/28/14.

@@ -32,9 +32,11 @@ public class DocumentRefMeta {
         if ( docType.equals(Void.class) ) {
             this.type = fieldType;
         } else {
-            type = docType;
+            this.type = docType;
         }
+
         this.fieldType =fieldType;
+
         this.refIdFieldName = refIdFieldName;
         this.fieldName = fieldName;
         this.meta = DocumentMeta.fromAnnotation(this.type);

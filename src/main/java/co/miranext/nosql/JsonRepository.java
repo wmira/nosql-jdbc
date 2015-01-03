@@ -1,5 +1,7 @@
 package co.miranext.nosql;
 
+import co.miranext.nosql.criteria.Criteria;
+
 import java.util.List;
 
 /**

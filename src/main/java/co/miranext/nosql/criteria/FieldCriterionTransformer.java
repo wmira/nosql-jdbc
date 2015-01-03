@@ -1,4 +1,6 @@
-package co.miranext.nosql;
+package co.miranext.nosql.criteria;
+
+import co.miranext.nosql.DocumentMeta;
 
 /**
  *
