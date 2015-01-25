@@ -19,7 +19,7 @@ public  class Criteria {
         return this;
     }
 
-    public Criteria addAll(final Criterion[] criterions) {
+    public Criteria addAll(final Criterion...criterions) {
         for ( Criterion criterion : criterions ) {
             this.add(criterion);
         }

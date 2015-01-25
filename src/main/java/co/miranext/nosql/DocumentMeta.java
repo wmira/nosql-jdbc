@@ -71,6 +71,15 @@ public class DocumentMeta {
     }
 
     /**
+     * if Id field is "id", it will return Id
+     *  
+     * @return
+     */
+    public String getIdFieldBeanAttr() {
+        String id = this.getIdField();
+        return String.valueOf(id.charAt(0)).toUpperCase() + "" + id.substring(1);
+    }
+    /**
      *
      *
      * @param cls

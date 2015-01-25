@@ -81,7 +81,10 @@ public class DocumentRefMeta {
                 if ( refMetas == null ) {
                     refMetas = new HashMap<>();
                 }
-                DocumentRefMeta refMeta = new DocumentRefMeta(docRef.document(),field.getType(),beanField,beanField + "Id" );
+
+                DocumentMeta docMeta = DocumentMeta.fromAnnotation(field.getType());
+
+                DocumentRefMeta refMeta = new DocumentRefMeta(docRef.document(),field.getType(),beanField,beanField + docMeta.getIdFieldBeanAttr() );
                 refMetas.put(beanField,refMeta);
             }
 

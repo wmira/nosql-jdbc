@@ -24,14 +24,14 @@ public class SQLDMLObject<T> {
     private final Map<String,Object> extraValues;
 
     public SQLDMLObject(final T documentInstance) {
-        this(documentInstance,null);
+        this(documentInstance,null,false);
     }
     /**
      * Create a SQLDML query for the given instance
      *
      * @param documentInstance
      */
-    public SQLDMLObject(final T documentInstance,final FieldCriterionTransformer transformer) {
+    public SQLDMLObject(final T documentInstance,final FieldCriterionTransformer transformer,boolean forcedInsert) {
 
         this.documentMeta = DocumentMeta.fromAnnotation(documentInstance.getClass());
         fieldAccess = BeanUtils.getFieldsFromObject(documentInstance.getClass());
@@ -39,9 +39,11 @@ public class SQLDMLObject<T> {
         Object id = BeanUtils.getPropertyValue(documentInstance, documentMeta.getIdField());
         extraValues  = generateExtraValues(documentInstance,true,this.documentMeta,fieldAccess);
 
-        if ( id == null ) {
-            id = UUID.randomUUID().toString();
-            fieldAccess.get("id").setObject(documentInstance,id);
+        if ( id == null  ||  forcedInsert ) {
+            if ( id == null ) {
+                id = UUID.randomUUID().toString();
+                fieldAccess.get(documentMeta.getIdField()).setObject(documentInstance,id);
+            }
             sqlQuery = generateInsert(documentMeta,indexMapping);
         } else {
             sqlQuery = generateUpdate(documentInstance,documentMeta,indexMapping,transformer);
@@ -91,20 +93,46 @@ public class SQLDMLObject<T> {
         }
 
         FieldCriterion fd = transformer.idFieldCriterion(meta,idStr);
-        StringBuilder builder = new StringBuilder("UPDATE " + meta.getTableName() + " SET " + meta.getColumnName() + "=? WHERE " + fd.toSQLString(null));
+        StringBuilder builder = new StringBuilder("UPDATE " + meta.getTableName() + " SET " + generateUpdateQuery(meta,indexMapping) + " WHERE " + fd.toSQLString(null));
+        
+        int lastIdx = 0;
+        for ( Integer g : indexMapping.keySet() ) {
+            if ( g > lastIdx ) {
+                lastIdx = g;
+            }
+        }
 
-        indexMapping.put(1,meta.getColumnName());
-        indexMapping.put(2,meta.getIdField());
+        //indexMapping.put(1,meta.getColumnName());
+        indexMapping.put(lastIdx+1,meta.getIdField());
 
         return builder.toString();
     }
 
+    public static  String generateUpdateQuery(final DocumentMeta meta,final Map<Integer,String> indexMapping) {
+        int startIdx = 1;
+        List<String> updates = new ArrayList<>();
+        
+        updates.add(meta.getColumnName() + "=?");
+        indexMapping.put(startIdx++,meta.getColumnName());
+        ColumnExtra[] extras = meta.getColumnExtras();
+        
+        if ( extras != null && extras.length > 0 ) {
+            for ( ColumnExtra extra : extras ) {
+                if ( !extra.isAuto() ) {
+                    updates.add(extra.getColumn() + "=?");
+                    indexMapping.put(startIdx++,extra.getColumn());
+                }
+            }
+        }
+        return SQLObjectQuery.join(updates.toArray(new String[updates.size()]), " , ");
+    }
+    
     public static String generateInsertFields(final DocumentMeta meta) {
         StringBuilder sb = new StringBuilder();
         sb.append(meta.getColumnName());
 
         ColumnExtra[] extras = meta.getColumnExtras();
-
+        
         if ( extras != null && extras.length > 0 ) {
             sb.append(",");
             sb.append(SQLObjectQuery.join(columnExtrasToString(true, extras), " , "));
@@ -170,9 +198,6 @@ public class SQLDMLObject<T> {
                 FieldAccess field = fields.get(CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,ce.getColumn()));
                 if (field != null) {
                     Object value = field.getValue(document);
-                    if (value == null) {
-                        throw new RuntimeException("extra field: '" + ce + "' value is null for document " + document.getClass().getName());
-                    }
                     extraVals.put(ce.getColumn(), value);
                 } else {
                     throw new RuntimeException("Extra field "  + ce + " not found on document.");

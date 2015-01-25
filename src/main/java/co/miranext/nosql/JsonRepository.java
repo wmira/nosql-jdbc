@@ -62,5 +62,12 @@ public interface JsonRepository {
      */
     public <T> void saveOrUpdate(T document);
 
+    /**
+     * Persist the given document
+     *
+     * @param document
+     * @param <T>
+     */
+    public <T> void persist(T document);
 
 }

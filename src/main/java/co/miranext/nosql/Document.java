@@ -14,6 +14,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Document {
 
+
     /**
      * The table name where this is stored
      *

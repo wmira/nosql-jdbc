@@ -13,22 +13,24 @@ import org.boon.core.TypeType;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
 import org.boon.json.JsonFactory;
+import org.boon.json.JsonSerializer;
+import org.boon.json.JsonSerializerFactory;
 import org.boon.json.ObjectMapper;
+import org.boon.json.serializers.FieldFilter;
 import org.postgresql.util.PGobject;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
 
 /**
  * Postgresql implementation of JsonRepository
  */
 public class PgsqlJsonRepository implements JsonRepository {
 
-
-
-    private DataSource dataSource;
+    protected DataSource dataSource;
 
     /**
      *
@@ -36,6 +38,10 @@ public class PgsqlJsonRepository implements JsonRepository {
      * @param dataSource
      */
     public PgsqlJsonRepository(final DataSource dataSource) {
+        if ( dataSource == null ) {
+            throw new RuntimeException("DataSource is null.");
+        }
+
         this.dataSource = dataSource;
     }
 
@@ -68,17 +74,28 @@ public class PgsqlJsonRepository implements JsonRepository {
         return findAsList(document,criteria != null ? criteria : new Criteria());
     }
 
+    @Override
+    public <T> void persist(T document) {
+        actualSaveOrUpdate(document, new SQLDMLObject(document,CRITERION_TRANSFORMER,true));
+    }
+
+    @Override
+    public <T> void saveOrUpdate(T document) {
+        actualSaveOrUpdate(document, new SQLDMLObject(document,CRITERION_TRANSFORMER,false));
+    }
     /**
      * Save this
      *
      * @param document
      * @param <T>
      */
-    @Override
-    public <T> void saveOrUpdate(T document) {
+    
+    public <T> void actualSaveOrUpdate(T document,SQLDMLObject dmlObjIn) {
 
-        final SQLDMLObject dmlObj = new SQLDMLObject(document,CRITERION_TRANSFORMER);
+
+        final SQLDMLObject dmlObj = dmlObjIn;
         final String sqlQuery = dmlObj.getSqlQuery();
+
         final DocumentMeta meta = dmlObj.getDocumentMeta();
         final Map<String,Object> extraValues = dmlObj.getExtraValues();
 
@@ -88,14 +105,20 @@ public class PgsqlJsonRepository implements JsonRepository {
             Map<Integer,String> mapping = dmlObj.getIndexMapping();
 
             for ( Integer idx : mapping.keySet() ) {
+
                 String name = mapping.get(idx);
-                if ( name.equals(meta.getColumnName())) { //this is
+               
+                if ( name.equals(meta.getColumnName())) { //this is id
                     PGobject jsonObj = toPGObject(toJsonString(document));
                     pstmt.setObject(idx,jsonObj,valueToSqlType(jsonObj));
                 } else {
                     //TODO, i think we should allow to set values of extras to be passed in and not be set on the document
                     Object val = extraValues.get(name);
-                    pstmt.setObject(idx,extraValues.get(name),valueToSqlType(val));
+
+                    if ( val instanceof  Date ) {
+                        val = new java.sql.Timestamp(((Date) val).getTime());
+                    }
+                    pstmt.setObject(idx,val,valueToSqlType(val));
                 }
             }
 
@@ -105,6 +128,7 @@ public class PgsqlJsonRepository implements JsonRepository {
             }
             //TODO: should we fail silently?
         } catch ( Exception e ) {
+            e.printStackTrace();
             throw new RuntimeException("Unable to save document: " + e.getMessage(),e);
         }
 
@@ -114,7 +138,13 @@ public class PgsqlJsonRepository implements JsonRepository {
 
     //Internal
 
+
+
     private static int valueToSqlType(final Object value) {
+
+        if ( value == null ) {
+            return Types.NULL;
+        }
 
         if ( value instanceof String ) {
             return Types.LONGVARCHAR;
@@ -126,7 +156,7 @@ public class PgsqlJsonRepository implements JsonRepository {
             return Types.BIGINT;
         } else if ( value instanceof PGobject ) {
             return Types.OTHER;
-        } else if ( value instanceof Timestamp ) {
+        } else if ( value instanceof Timestamp || value instanceof Date ) {
             return Types.TIMESTAMP;
         } //FIXME: COMPLETE This
         throw new RuntimeException("Type not supported: " + value);
@@ -162,7 +192,6 @@ public class PgsqlJsonRepository implements JsonRepository {
 
         try (Connection con = dataSource.getConnection();
              PreparedStatement pstmt = con.prepareStatement(sqlObjectQuery.toSQLSelectQuery(criteria,CRITERION_TRANSFORMER)) ){
-
             //populate
             populateStatement(pstmt,criteria);
             ResultSet rs = pstmt.executeQuery();
@@ -309,6 +338,14 @@ public class PgsqlJsonRepository implements JsonRepository {
                 rsVal = rs.getInt(rsColumn);
             } else if ( TypeType.STRING.equals(type) ) {
                 rsVal = rs.getString(rsColumn);
+            } else if ( TypeType.DATE.equals(type) ) {
+                Timestamp sqlDate = rs.getTimestamp(rsColumn);
+                if ( sqlDate != null ) {
+                    rsVal = sqlDate;
+                } else {
+                    rsVal = null;
+                }
+
             } else {
                 throw new RuntimeException("don't know what to do: " + type + " for column: '" + column + "'");
             }
@@ -342,9 +379,20 @@ public class PgsqlJsonRepository implements JsonRepository {
 
     public static <T> String toJsonString(T document) {
 
-        ObjectMapper mapper =  JsonFactory.create();
-        String data = mapper.toJson(document);
-        return data;
+        JsonSerializerFactory serializer = new JsonSerializerFactory().addFilter(new FieldFilter() {
+            @Override
+            public boolean include(Object o, FieldAccess fieldAccess) {
+                if ( fieldAccess.hasAnnotation(DocumentRef.class.getName())) {
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        ObjectMapper mapper = JsonFactory.create(null, serializer);
+
+        return mapper.toJson(document);
+
 
     }
 
