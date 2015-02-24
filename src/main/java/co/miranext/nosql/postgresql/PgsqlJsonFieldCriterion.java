@@ -1,5 +1,6 @@
 package co.miranext.nosql.postgresql;
 
+import co.miranext.nosql.criteria.CriterionOperator;
 import co.miranext.nosql.criteria.FieldCriterion;
 
 /**
@@ -8,13 +9,11 @@ import co.miranext.nosql.criteria.FieldCriterion;
  *
  */
 public class PgsqlJsonFieldCriterion extends FieldCriterion {
+    private String columnName;
 
-    public PgsqlJsonFieldCriterion(String field, Object value) {
-        super(field, value);
-    }
-
-    public PgsqlJsonFieldCriterion(String columnName, String field, Object value) {
-        super(columnName, field, value);
+    public PgsqlJsonFieldCriterion(String columnName, String field,  CriterionOperator operator, Object value) {
+        super(field,operator, value);
+        this.columnName = columnName;
     }
 
     @Override
@@ -27,7 +26,14 @@ public class PgsqlJsonFieldCriterion extends FieldCriterion {
             prefix = alias + ".";
         }
 
-        return prefix + this.columnName + "->>'" + this.field + "'=?";
+        if ( CriterionOperator.BETWEEN.equals(operator) ) {
+            return " cast(" + prefix + this.columnName + "->>'" + this.field + "' as bigint ) " + CriterionOperator.BETWEEN.name() + " ? and ? ";
+        } else  {
+            return prefix + this.columnName + "->>'" + this.field + "'=?";
+        }
+
+
     }
+
 
 }

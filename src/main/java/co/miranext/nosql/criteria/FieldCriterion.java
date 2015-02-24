@@ -8,6 +8,7 @@ public class FieldCriterion implements Criterion {
     protected String field;
     protected Object value;
     protected String columnName;
+    protected CriterionOperator operator;
 
     /**
      *
@@ -15,21 +16,14 @@ public class FieldCriterion implements Criterion {
      * @param field
      */
     public FieldCriterion(final String field, Object value) {
-        this(null,field,value);
+        this(field,null,value);
     }
 
-    /**
-     * We need to replace this with an actual column name
-     *
-     *
-     * @param columnName
-     * @param field
-     * @param value
-     */
-    public FieldCriterion(final String columnName,final String field, Object value) {
-        this.columnName = columnName;
+    public FieldCriterion(final String field, CriterionOperator operator, Object value) {
         this.field = field;
         this.value = value;
+        this.operator = operator;
+
     }
 
     public String toSQLString(final String alias) {
@@ -48,5 +42,7 @@ public class FieldCriterion implements Criterion {
         return columnName;
     }
 
-
+    public CriterionOperator getOperator() {
+        return operator;
+    }
 }

@@ -1,10 +1,7 @@
 package co.miranext.nosql.postgresql;
 
 import co.miranext.nosql.*;
-import co.miranext.nosql.criteria.Criteria;
-import co.miranext.nosql.criteria.Criterion;
-import co.miranext.nosql.criteria.FieldCriterion;
-import co.miranext.nosql.criteria.FieldCriterionTransformer;
+import co.miranext.nosql.criteria.*;
 import co.miranext.nosql.query.SQLColumnQuery;
 import co.miranext.nosql.query.SQLDMLObject;
 import co.miranext.nosql.query.SQLObjectQuery;
@@ -13,7 +10,6 @@ import org.boon.core.TypeType;
 import org.boon.core.reflection.BeanUtils;
 import org.boon.core.reflection.fields.FieldAccess;
 import org.boon.json.JsonFactory;
-import org.boon.json.JsonSerializer;
 import org.boon.json.JsonSerializerFactory;
 import org.boon.json.ObjectMapper;
 import org.boon.json.serializers.FieldFilter;
@@ -22,8 +18,10 @@ import org.postgresql.util.PGobject;
 import javax.sql.DataSource;
 import java.lang.reflect.Field;
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Postgresql implementation of JsonRepository
@@ -166,19 +164,28 @@ public class PgsqlJsonRepository implements JsonRepository {
         List<Criterion> criterionList = criteria.getCriteria();
 
         int size = criterionList.size();
+
         int pstmtIdx = 1;
 
         for ( int i=0; i < size; i++ ) {
             Criterion criterion = criterionList.get(i);
             Object value = criterion.getValue();
             if ( criterion instanceof FieldCriterion) {
-                //for postgresql, all FieldCriterion are strings
-                if ( value != null ) {
-                    pstmt.setString(pstmtIdx++, value.toString());
-                } else {
-                    pstmt.setNull(pstmtIdx++,Types.NULL);
-                }
 
+                //something will be weird here, if value is an instance of RangeValue, then we actually have between clause so
+                // our index is not a straightup 1 to 1, we probably should have a direct marker of ? to index
+                //for now this will do
+                if ( value != null && value instanceof RangeValue ) {
+                    RangeValue range = (RangeValue)value;
+                    pstmt.setLong(pstmtIdx++,(Long)range.getStartRange()); //for now everything is a number, FIXME, we should work for sql dates as well
+                    pstmt.setLong(pstmtIdx++,(Long)range.getEndRange()); //for now everything is a number, FIXME, we should work for sql dates as well
+                } else {
+                    if (value != null) {
+                        pstmt.setString(pstmtIdx++, value.toString());
+                    } else {
+                        pstmt.setNull(pstmtIdx++, Types.NULL);
+                    }
+                }
             } else {
                 pstmt.setObject(pstmtIdx++, value, valueToSqlType(value));
             }
@@ -192,6 +199,7 @@ public class PgsqlJsonRepository implements JsonRepository {
 
         try (Connection con = dataSource.getConnection();
              PreparedStatement pstmt = con.prepareStatement(sqlObjectQuery.toSQLSelectQuery(criteria,CRITERION_TRANSFORMER)) ){
+
             //populate
             populateStatement(pstmt,criteria);
             ResultSet rs = pstmt.executeQuery();
@@ -364,7 +372,7 @@ public class PgsqlJsonRepository implements JsonRepository {
     private <T> T findInternal(Class<T> document, final String id, Criteria criteria) {
 
         DocumentMeta meta = DocumentMeta.fromAnnotation(document);
-        PgsqlJsonFieldCriterion idCriterion = new PgsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),id);
+        PgsqlJsonFieldCriterion idCriterion = new PgsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),null,id);
         criteria.add(idCriterion);
         return findInternal(document,criteria);
     }
@@ -399,12 +407,12 @@ public class PgsqlJsonRepository implements JsonRepository {
     public static FieldCriterionTransformer CRITERION_TRANSFORMER = new FieldCriterionTransformer() {
         @Override
         public FieldCriterion transform(final DocumentMeta meta,final FieldCriterion criterion) {
-            return new PgsqlJsonFieldCriterion(meta.getColumnName(), criterion.getField(), criterion.getValue());
+            return new PgsqlJsonFieldCriterion(meta.getColumnName(), criterion.getField(),criterion.getOperator(), criterion.getValue());
         }
 
         @Override
         public FieldCriterion idFieldCriterion(final DocumentMeta meta,final String value) {
-            return new PgsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),value);
+            return new PgsqlJsonFieldCriterion(meta.getColumnName(),meta.getIdField(),null,value);
         }
     };
 }

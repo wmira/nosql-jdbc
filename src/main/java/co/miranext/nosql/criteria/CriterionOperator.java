@@ -4,7 +4,7 @@ package co.miranext.nosql.criteria;
  *
  */
 public enum CriterionOperator {
-    EQ("="),GT(">"),LT("<"),GTE(">="),LTE("<="),LIKE("%"),CONTAINS("%"),ENDSWITH("%"),STARTSWITH("%");
+    EQ("="),GT(">"),LT("<"),GTE(">="),LTE("<="),LIKE("%"),CONTAINS("%"),ENDSWITH("%"),STARTSWITH("%"), BETWEEN("BETWEEN");
 
     private final String operator;
 
