@@ -8,7 +8,7 @@
     <artifactId>nosql-jdbc</artifactId>
     <version>0.0.5</version>
     <packaging>jar</packaging>
-    <name>docdb-jdbc</name>
+    <name>nosql-jdbc</name>
     <description>A Nosql Repository API for RDBMS via JDBC</description>
     <url>https://github.com/wmira/nosql-jdbc</url>
 
