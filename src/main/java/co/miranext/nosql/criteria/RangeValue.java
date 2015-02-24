@@ -17,6 +17,6 @@ public class RangeValue<T> {
     }
 
     public T getEndRange() {
-        return start;
+        return end;
     }
 }
