@@ -19,6 +19,11 @@ public class ColumnCriterion implements Criterion {
         this.value = value;
     }
 
+    @Override
+    public CriterionOperator getOperator() {
+        return operator;
+    }
+
     /**
      *
      * @return
@@ -34,7 +39,13 @@ public class ColumnCriterion implements Criterion {
             prefix = alias + ".";
         }
         //FIXME: do something with contains,startsWith and endsWith
-        return prefix + column + operator.operator() + "?";
+        if ( operator.equals(CriterionOperator.IS_NOT_NULL) ) {
+            return prefix + column + " IS NOT NULL ";
+        } else if ( operator.equals(CriterionOperator.IS_NULL) ) {
+            return prefix + column + " IS NULL ";
+        } else {
+            return prefix + column + operator.operator() + "?";
+        }
     }
 
     @Override

@@ -6,7 +6,7 @@
 
     <groupId>co.miranext</groupId>
     <artifactId>nosql-jdbc</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
     <packaging>jar</packaging>
     <name>nosql-jdbc</name>
     <description>A Nosql Repository API for RDBMS via JDBC</description>

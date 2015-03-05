@@ -21,7 +21,6 @@ public class SQLColumnQuery {
 
     // generate query fields, so basically this is alias.column subalias
     private Map<String,ColumnAlias> queryFields = new HashMap<>();
-    //private Map<String,String> aliasFields = new HashMap<>();
 
     private String joinQuery;
     private String fieldsQuery;
@@ -46,7 +45,7 @@ public class SQLColumnQuery {
         ColumnExtra[] extras = selfMeta.getColumnExtras();
         for ( ColumnExtra extra : extras ) {
             String column = extra.getColumn();
-            queryFields.put(column,new ColumnAlias(column,documentAlias,aliasFieldCounter++) );//  documentAlias + "." + column + " " + documentAlias + aliasFieldCounter++);
+            queryFields.put(column,new ColumnAlias(column,documentAlias,aliasFieldCounter++) );
             queryStrings.add(queryFields.get(column).getQueryAlias());
         }
 

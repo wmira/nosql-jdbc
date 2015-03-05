@@ -171,24 +171,30 @@ public class PgsqlJsonRepository implements JsonRepository {
         for ( int i=0; i < size; i++ ) {
             Criterion criterion = criterionList.get(i);
             Object value = criterion.getValue();
-            if ( criterion instanceof FieldCriterion) {
 
-                //something will be weird here, if value is an instance of RangeValue, then we actually have between clause so
-                // our index is not a straightup 1 to 1, we probably should have a direct marker of ? to index
-                //for now this will do
-                if ( value != null && value instanceof RangeValue ) {
-                    RangeValue range = (RangeValue)value;
-                    pstmt.setLong(pstmtIdx++,(Long)range.getStartRange()); //for now everything is a number, FIXME, we should work for sql dates as well
-                    pstmt.setLong(pstmtIdx++,(Long)range.getEndRange()); //for now everything is a number, FIXME, we should work for sql dates as well
-                } else {
-                    if (value != null) {
-                        pstmt.setString(pstmtIdx++, value.toString());
+            if ( criterion.getOperator() != null &&  ( criterion.getOperator().equals(CriterionOperator.IS_NOT_NULL) ||criterion.getOperator().equals(CriterionOperator.IS_NULL) ) ) {
+                continue;
+            } else{
+                if (criterion instanceof FieldCriterion) {
+
+                    //something will be weird here, if value is an instance of RangeValue, then we actually have between clause so
+                    // our index is not a straightup 1 to 1, we probably should have a direct marker of ? to index
+                    //for now this will do
+                    if (value != null && value instanceof RangeValue) {
+                        RangeValue range = (RangeValue) value;
+                        pstmt.setLong(pstmtIdx++, (Long) range.getStartRange()); //for now everything is a number, FIXME, we should work for sql dates as well
+                        pstmt.setLong(pstmtIdx++, (Long) range.getEndRange()); //for now everything is a number, FIXME, we should work for sql dates as well
+
                     } else {
-                        pstmt.setNull(pstmtIdx++, Types.NULL);
+                        if (value != null) {
+                            pstmt.setString(pstmtIdx++, value.toString());
+                        } else {
+                            pstmt.setNull(pstmtIdx++, Types.NULL);
+                        }
                     }
+                } else {
+                    pstmt.setObject(pstmtIdx++, value, valueToSqlType(value));
                 }
-            } else {
-                pstmt.setObject(pstmtIdx++, value, valueToSqlType(value));
             }
         }
     }

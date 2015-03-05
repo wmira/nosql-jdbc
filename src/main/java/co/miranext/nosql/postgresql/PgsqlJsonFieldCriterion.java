@@ -26,7 +26,11 @@ public class PgsqlJsonFieldCriterion extends FieldCriterion {
             prefix = alias + ".";
         }
 
-        if ( CriterionOperator.BETWEEN.equals(operator) ) {
+        if ( operator != null && operator.equals(CriterionOperator.IS_NOT_NULL) ) {
+            return "(" + prefix + this.columnName + "->>'" + this.field + "') IS NOT NULL ";
+        } else if ( operator != null  && operator.equals(CriterionOperator.IS_NULL) ) {
+            return "(" + prefix + this.columnName + "->>'" + this.field + "') IS NULL ";
+        } else  if ( operator != null  && CriterionOperator.BETWEEN.equals(operator) ) {
             return " cast(" + prefix + this.columnName + "->>'" + this.field + "' as bigint ) " + CriterionOperator.BETWEEN.name() + " ? and ? ";
         } else  {
             return prefix + this.columnName + "->>'" + this.field + "'=?";

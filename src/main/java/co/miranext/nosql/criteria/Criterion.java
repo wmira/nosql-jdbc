@@ -8,4 +8,6 @@ public interface Criterion {
     public String toSQLString(String alias);
 
     public Object getValue();
+
+    public CriterionOperator getOperator();
 }
