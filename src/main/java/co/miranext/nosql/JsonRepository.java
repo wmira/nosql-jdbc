@@ -12,7 +12,12 @@ import java.util.List;
  */
 public interface JsonRepository {
 
-
+    /**
+     * Create a batching json repo instance. Null if not supported
+     *
+     * @return
+     */
+    public BatchingJsonRepository batch();
     /**
      * Find using the given annotated class
      *

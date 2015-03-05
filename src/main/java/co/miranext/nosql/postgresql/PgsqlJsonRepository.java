@@ -1,6 +1,7 @@
 package co.miranext.nosql.postgresql;
 
 import co.miranext.nosql.*;
+import co.miranext.nosql.BatchingJsonRepository;
 import co.miranext.nosql.criteria.*;
 import co.miranext.nosql.query.SQLColumnQuery;
 import co.miranext.nosql.query.SQLDMLObject;
@@ -402,6 +403,15 @@ public class PgsqlJsonRepository implements JsonRepository {
         return mapper.toJson(document);
 
 
+    }
+
+    /**
+     * Create a instance where all operations are placed inside a transaction
+     *
+     * @return
+     */
+    public BatchingJsonRepository batch() {
+        return new BatchingPgsqlJsonRepository(this.dataSource);
     }
 
     public static FieldCriterionTransformer CRITERION_TRANSFORMER = new FieldCriterionTransformer() {

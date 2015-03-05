@@ -1,5 +1,6 @@
 package co.miranext.nosql.postgresql;
 
+import co.miranext.nosql.BatchingJsonRepository;
 import co.miranext.nosql.testbean.Personnel;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,6 +34,69 @@ public class PgsqlJsonRepositoryTest {
     public void setup() {
 
     }
+
+    @Test
+    public void testBatchLifeycleRollback() throws Exception {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        Connection con = Mockito.mock(Connection.class);
+
+        when(dataSource.getConnection()).thenReturn(con);
+
+        PgsqlJsonRepository mainRepository = new PgsqlJsonRepository(dataSource);
+        BatchingJsonRepository batchingJsonRepository = mainRepository.batch();
+
+        try {
+            batchingJsonRepository.start();
+            batchingJsonRepository.saveOrUpdate(new Personnel() {
+                @Override
+                public String getId() {
+                    throw new RuntimeException("Error"); //force error
+                }
+            });
+            batchingJsonRepository.commit();
+        } catch ( Exception e ) {
+            batchingJsonRepository.rollback();
+        } finally {
+            batchingJsonRepository.release();
+        }
+
+        //check here
+        verify(con,Mockito.times(2)).setAutoCommit(false); //1 is when we set it to false, second is when we return it to its original state
+        verify(con, Mockito.times(0)).commit();
+        verify(con,Mockito.times(1)).rollback();
+        verify(con,Mockito.times(1)).close();
+    }
+    @Test
+    public void testBatchLifeycleCommit() throws Exception {
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        Connection con = Mockito.mock(Connection.class);
+        PreparedStatement pstmt = Mockito.mock(PreparedStatement.class);
+        when(dataSource.getConnection()).thenReturn(con);
+        when(con.prepareStatement(any(String.class))).thenReturn(pstmt);
+        when(pstmt.executeUpdate()).thenReturn(1);
+
+        PgsqlJsonRepository mainRepository = new PgsqlJsonRepository(dataSource);
+        BatchingJsonRepository batchingJsonRepository = mainRepository.batch();
+
+        try {
+            batchingJsonRepository.start();
+            batchingJsonRepository.saveOrUpdate(new Personnel());
+            batchingJsonRepository.commit();
+        } catch ( Exception e ) {
+            batchingJsonRepository.rollback();
+        } finally {
+            batchingJsonRepository.release();
+        }
+
+        //check here
+        verify(con,Mockito.times(2)).setAutoCommit(false); //1 is when we set it to false, second is when we return it to its original state
+        verify(con,Mockito.times(1)).commit();
+        verify(con,Mockito.times(0)).rollback();
+        verify(con,Mockito.times(1)).close();
+    }
+
+
+
 
     @Test
     public void testFind() throws Exception {
